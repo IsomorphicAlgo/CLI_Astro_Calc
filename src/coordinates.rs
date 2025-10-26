@@ -1,29 +1,17 @@
-//! Coordinate system conversions
-//! 
-//! This module provides functions to convert between different astronomical
-//! coordinate systems including:
-//! - Right Ascension/Declination (RA/Dec)
-//! - Altitude/Azimuth (Alt/Az) 
-//! - Earth-Centered, Earth-Fixed (ECEF)
-//! - Earth-Centered Inertial (ECI)
-
 use crate::Result;
 
-/// Right Ascension and Declination coordinates
 #[derive(Debug, Clone, Copy)]
 pub struct RaDec {
-    pub ra: f64,   // Right Ascension in hours
-    pub dec: f64,  // Declination in degrees
+    pub ra: f64,
+    pub dec: f64,
 }
 
-/// Altitude and Azimuth coordinates
 #[derive(Debug, Clone, Copy)]
 pub struct AltAz {
-    pub alt: f64,  // Altitude in degrees
-    pub az: f64,   // Azimuth in degrees
+    pub alt: f64,
+    pub az: f64,
 }
 
-/// Earth-Centered, Earth-Fixed coordinates
 #[derive(Debug, Clone, Copy)]
 pub struct Ecef {
     pub x: f64,
@@ -31,7 +19,6 @@ pub struct Ecef {
     pub z: f64,
 }
 
-/// Earth-Centered Inertial coordinates
 #[derive(Debug, Clone, Copy)]
 pub struct Eci {
     pub x: f64,
@@ -39,124 +26,39 @@ pub struct Eci {
     pub z: f64,
 }
 
-/// Convert RA/Dec to Alt/Az
-/// 
-/// Converts equatorial coordinates (RA/Dec) to horizontal coordinates (Alt/Az)
-/// based on the observer's location and local sidereal time.
-/// 
-/// # Arguments
-/// * `ra_dec` - Right Ascension (hours) and Declination (degrees) coordinates
-/// * `observer_lat` - Observer latitude in degrees (positive North, negative South)
-/// * `observer_lon` - Observer longitude in degrees (positive East, negative West)
-/// * `lst` - Local Sidereal Time in hours (0-24)
-/// 
-/// # Returns
-/// Altitude (degrees above horizon) and Azimuth (degrees from North, clockwise)
-/// 
-/// # Algorithm
-/// 1. Calculate hour angle: H = LST - RA
-/// 2. Convert to Alt: alt = arcsin(sin(dec) * sin(lat) + cos(dec) * cos(lat) * cos(H))
-/// 3. Convert to Az: az = arctan2(sin(H), cos(H) * sin(lat) - tan(dec) * cos(lat))
 pub fn ra_dec_to_alt_az(ra_dec: RaDec, observer_lat: f64, _observer_lon: f64, lst: f64) -> Result<AltAz> {
-    // Convert inputs to radians
-    let ra_hours = ra_dec.ra;
     let dec_rad = ra_dec.dec.to_radians();
     let lat_rad = observer_lat.to_radians();
+    let hour_angle_rad = ((lst - ra_dec.ra).rem_euclid(24.0) * 15.0).to_radians();
     
-    // Calculate hour angle (in hours, then convert to radians)
-    // Hour angle = LST - RA
-    let hour_angle_hours = (lst - ra_hours).rem_euclid(24.0);
-    let hour_angle_rad = (hour_angle_hours * 15.0).to_radians(); // Convert hours to degrees to radians
+    let sin_alt = dec_rad.sin() * lat_rad.sin() + dec_rad.cos() * lat_rad.cos() * hour_angle_rad.cos();
+    let alt_deg = sin_alt.asin().to_degrees();
     
-    // Calculate altitude using the formula:
-    // sin(alt) = sin(dec) * sin(lat) + cos(dec) * cos(lat) * cos(H)
-    let sin_alt = dec_rad.sin() * lat_rad.sin() 
-                + dec_rad.cos() * lat_rad.cos() * hour_angle_rad.cos();
-    let alt_rad = sin_alt.asin();
-    let alt_deg = alt_rad.to_degrees();
+    let az_rad = hour_angle_rad.sin().atan2(hour_angle_rad.cos() * lat_rad.sin() - dec_rad.tan() * lat_rad.cos());
+    let az_deg = (az_rad.to_degrees() + 180.0).rem_euclid(360.0);
     
-    // Calculate azimuth using the formula:
-    // Az = atan2(sin(H), cos(H) * sin(lat) - tan(dec) * cos(lat))
-    // Then convert to 0-360° measured from North clockwise
-    // Using atan2 for proper quadrant handling
-    let az_numerator = hour_angle_rad.sin();
-    let az_denominator = hour_angle_rad.cos() * lat_rad.sin() - dec_rad.tan() * lat_rad.cos();
-    let az_rad = az_numerator.atan2(az_denominator);
-    
-    // Convert to degrees and adjust to 0-360° range (measured from North, clockwise)
-    // The formula gives azimuth measured from South, so we need to add 180°
-    let mut az_deg = az_rad.to_degrees() + 180.0;
-    if az_deg < 0.0 {
-        az_deg += 360.0;
-    } else if az_deg >= 360.0 {
-        az_deg -= 360.0;
-    }
-    
-    Ok(AltAz {
-        alt: alt_deg,
-        az: az_deg,
-    })
+    Ok(AltAz { alt: alt_deg, az: az_deg })
 }
 
-/// Convert Alt/Az to RA/Dec
-/// 
-/// Converts horizontal coordinates (Alt/Az) to equatorial coordinates (RA/Dec)
-/// based on the observer's location and local sidereal time.
-/// 
-/// # Arguments
-/// * `alt_az` - Altitude (degrees) and Azimuth (degrees from North) coordinates
-/// * `observer_lat` - Observer latitude in degrees (positive North, negative South)
-/// * `observer_lon` - Observer longitude in degrees (positive East, negative West)
-/// * `lst` - Local Sidereal Time in hours (0-24)
-/// 
-/// # Returns
-/// Right Ascension (hours) and Declination (degrees)
-/// 
-/// # Algorithm
-/// 1. Convert to Dec: dec = arcsin(sin(alt) * sin(lat) + cos(alt) * cos(lat) * cos(az))
-/// 2. Calculate hour angle: H = arctan2(-sin(az), cos(az) * sin(lat) + tan(alt) * cos(lat))
-/// 3. Convert to RA: RA = LST - H
 pub fn alt_az_to_ra_dec(alt_az: AltAz, observer_lat: f64, _observer_lon: f64, lst: f64) -> Result<RaDec> {
-    // Convert inputs to radians
     let alt_rad = alt_az.alt.to_radians();
     let az_rad = alt_az.az.to_radians();
     let lat_rad = observer_lat.to_radians();
     
-    // Calculate declination using the formula:
-    // sin(dec) = sin(alt) * sin(lat) + cos(alt) * cos(lat) * cos(az)
-    let sin_dec = alt_rad.sin() * lat_rad.sin() 
-                + alt_rad.cos() * lat_rad.cos() * az_rad.cos();
-    let dec_rad = sin_dec.asin();
-    let dec_deg = dec_rad.to_degrees();
+    let sin_dec = alt_rad.sin() * lat_rad.sin() + alt_rad.cos() * lat_rad.cos() * az_rad.cos();
+    let dec_deg = sin_dec.asin().to_degrees();
     
-    // Calculate hour angle using the formula:
-    // tan(H) = -sin(az) / (cos(az) * sin(lat) + tan(alt) * cos(lat))
-    // Using atan2 for proper quadrant handling
-    let hour_angle_rad = (-az_rad.sin()).atan2(
-        az_rad.cos() * lat_rad.sin() + alt_rad.tan() * lat_rad.cos()
-    );
+    let hour_angle_rad = (-az_rad.sin()).atan2(az_rad.cos() * lat_rad.sin() + alt_rad.tan() * lat_rad.cos());
+    let ra_hours = (lst - hour_angle_rad.to_degrees() / 15.0).rem_euclid(24.0);
     
-    // Convert hour angle to hours
-    let hour_angle_hours = hour_angle_rad.to_degrees() / 15.0;
-    
-    // Calculate Right Ascension: RA = LST - H
-    let ra_hours = (lst - hour_angle_hours).rem_euclid(24.0);
-    
-    Ok(RaDec {
-        ra: ra_hours,
-        dec: dec_deg,
-    })
+    Ok(RaDec { ra: ra_hours, dec: dec_deg })
 }
 
-/// Convert ECEF to ECI
-pub fn ecef_to_eci(ecef: Ecef, gmst: f64) -> Result<Eci> {
-    // TODO: Implement conversion
+pub fn ecef_to_eci(_ecef: Ecef, _gmst: f64) -> Result<Eci> {
     Ok(Eci { x: 0.0, y: 0.0, z: 0.0 })
 }
 
-/// Convert ECI to ECEF
-pub fn eci_to_ecef(eci: Eci, gmst: f64) -> Result<Ecef> {
-    // TODO: Implement conversion
+pub fn eci_to_ecef(_eci: Eci, _gmst: f64) -> Result<Ecef> {
     Ok(Ecef { x: 0.0, y: 0.0, z: 0.0 })
 }
 

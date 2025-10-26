@@ -1,10 +1,17 @@
 # CLI Astro Calc
 
-A command-line astronomy and orbital mechanics calculator built in Rust. The purpose of this is to learn the Rust language whilst creating a custom tool for myself.
+A command-line astronomy and orbital mechanics calculator built in Rust.
 
-## Project Status: Phase 3 - Coordinate Conversions ✅
+## Version 0.1
 
-This project is being developed iteratively, with each phase building upon the previous one.
+**Features:**
+- Julian Date and Sidereal Time calculations
+- Solar and lunar position calculations (RA/Dec)
+- Rise/set times for Sun and Moon
+- Coordinate conversions (RA/Dec ↔ Alt/Az)
+- Kepler's equation solver
+- Orbital period calculations
+- Orbital elements to state vectors
 
 ### Phase 1 - Basic Structure ✅ (Completed)
 - ✅ Project structure with proper Rust organization
@@ -27,50 +34,46 @@ This project is being developed iteratively, with each phase building upon the p
 - ✅ **Real-time LST** - Uses current time for accurate conversions
 - ✅ **Comprehensive Testing** - Edge cases and round-trip accuracy verified
 
+### Phase 4 - Lunar & Orbital Mechanics ✅ (Completed)
+- ✅ **Lunar Position** - Calculate Moon's RA/Dec using perturbation theory
+- ✅ **Lunar Rise/Set** - Calculate moonrise and moonset times
+- ✅ **Kepler's Equation** - Solve for true anomaly from mean anomaly
+- ✅ **Orbital Period** - Calculate period using Kepler's Third Law
+- ✅ **Elements → State Vectors** - Convert orbital elements to position/velocity
+- ✅ **Comprehensive Testing** - 29 tests covering all functions
+
 ### Still To Implement
-- Lunar position calculations
-- Basic orbital elements to position conversions
 - ECEF ↔ ECI transformations
+- Planet positions (using VSOP87 or similar)
+- More advanced orbital propagation
 
 ## Project Structure
 
 ```
 CLI_Astro_Calc/
-├── Cargo.toml          # Project configuration and dependencies
+├── Cargo.toml
 ├── src/
-│   ├── main.rs         # CLI entry point and command parsing
-│   ├── lib.rs          # Library structure and error types
-│   ├── coordinates.rs  # Coordinate system conversions
-│   ├── celestial.rs    # Celestial object calculations
-│   ├── time.rs         # Time calculations (Julian dates, sidereal time)
-│   └── orbital.rs      # Orbital mechanics calculations
-├── tests/              # Integration tests
-├── benches/            # Performance benchmarks
-├── docs/               # Documentation
-└── readme.md           # This file
+│   ├── main.rs         # CLI entry point
+│   ├── lib.rs          # Library and error types
+│   ├── coordinates.rs  # Coordinate conversions
+│   ├── celestial.rs    # Sun/Moon calculations
+│   ├── time.rs         # Time systems
+│   └── orbital.rs      # Orbital mechanics
+└── readme.md
 ```
 
 ## Dependencies
 
-- **clap**: Command-line argument parsing
-- **log**: Logging framework
-- **env_logger**: Logging implementation
-- **anyhow**: Error handling
-- **thiserror**: Custom error types
-- **chrono**: Date and time handling
-- **serde**: Serialization support
-- **criterion**: Benchmarking (dev dependency)
+- clap: CLI parsing
+- chrono: Date/time handling
+- thiserror/anyhow: Error handling
+- log/env_logger: Logging
 
-## Building and Running
+## Usage
 
-### Prerequisites
-- Rust 1.70+ (edition 2021)
-- Cargo package manager
-
-### Build
 ```bash
+# Build
 cargo build
-```
 
 ### Run
 ```bash
@@ -89,42 +92,35 @@ cargo run -- position --object "sun" --date "2024-06-21"
 
 # Calculate Julian Date and sidereal time
 cargo run -- time --date "2024-01-01" --time "12:00:00"
-# Output: Julian Date: 2460311.500000, GMST: 06:44:33
-
-# Convert RA/Dec to Alt/Az (uses current time and New York location)
 cargo run -- convert --from ra-dec --to alt-az --coords "12.5,45.0"
-# Output: Alt: +32°36'06", Az: 056°09'08"
 
-# Convert Alt/Az to RA/Dec (uses current time and New York location)
-cargo run -- convert --from alt-az --to ra-dec --coords "45.0,180.0"
-# Output: RA: 07:03:25, Dec: -04°17'13"
-
-# Placeholder examples (not yet implemented):
-cargo run -- position --object "moon" --date "2024-01-01"
-cargo run -- orbital --semi-major 7000 --eccentricity 0.1 --inclination 45
-
-# Enable verbose logging
-cargo run -- --verbose rise-set --object "sun" --latitude 40.7128 --longitude=-74.0060
-
-# Note: For negative values, use the = syntax: --longitude=-74.0060
-```
-
-### Test
-```bash
+# Test
 cargo test
 ```
 
-### Benchmark
-```bash
-cargo bench
-```
+## Formula Reference
 
-## Function Descriptions
+### Time Systems
+- [Julian Date](https://en.wikipedia.org/wiki/Julian_day) - Continuous day count since 4713 BC
+- [Sidereal Time](https://en.wikipedia.org/wiki/Sidereal_time) - Earth's rotation relative to stars
 
 ### Coordinate Conversions
 - **RA/Dec to Alt/Az**: Convert from equatorial coordinates (Right Ascension/Declination) to horizontal coordinates (Altitude/Azimuth) for a given observer location and time
 - **Alt/Az to RA/Dec**: Convert from horizontal coordinates to equatorial coordinates
 - **ECEF/ECI**: Convert between Earth-Centered Earth-Fixed and Earth-Centered Inertial coordinate systems
+### Celestial Coordinates
+- [Equatorial Coordinate System](https://en.wikipedia.org/wiki/Equatorial_coordinate_system) - Right Ascension / Declination
+- [Horizontal Coordinate System](https://en.wikipedia.org/wiki/Horizontal_coordinate_system) - Altitude / Azimuth
+- [Spherical Trigonometry](https://en.wikipedia.org/wiki/Spherical_trigonometry) - Coordinate transformations
+
+### Solar Calculations
+- [Position of the Sun](https://en.wikipedia.org/wiki/Position_of_the_Sun) - Solar coordinates
+- [Sunrise Equation](https://en.wikipedia.org/wiki/Sunrise_equation) - Rise/set times
+- [Equation of Time](https://en.wikipedia.org/wiki/Equation_of_time) - Solar corrections
+
+### Lunar Calculations
+- [Lunar Theory](https://en.wikipedia.org/wiki/Lunar_theory) - Moon's complex orbit
+- [Jean Meeus Algorithms](https://en.wikipedia.org/wiki/Jean_Meeus) - Astronomical calculations
 
 ### Celestial Calculations
 - **Rise/Set Times**: Calculate when celestial objects rise and set for a given observer location
@@ -134,9 +130,11 @@ cargo bench
 - **Julian Dates**: Convert calendar dates to Julian Date system used in astronomy
 - **Sidereal Time**: Calculate sidereal time (star time) for astronomical observations
 
-### Orbital Mechanics
-- **Orbital Elements to Position**: Convert classical orbital elements to position and velocity vectors
-- **Orbital Period**: Calculate the period of an orbit from its semi-major axis
+### Orbital Mechanics (References)
+- [Kepler's Laws](https://en.wikipedia.org/wiki/Kepler%27s_laws_of_planetary_motion) - Orbital period and motion
+- [Kepler's Equation](https://en.wikipedia.org/wiki/Kepler%27s_equation) - Mean to true anomaly
+- [Orbital Elements](https://en.wikipedia.org/wiki/Orbital_elements) - Classical six elements
+- [Orbital State Vectors](https://en.wikipedia.org/wiki/Orbital_state_vectors) - Position and velocity
 
 ## Development Notes
 
@@ -195,14 +193,55 @@ Phase 3 successfully implements coordinate system transformations:
 - Round-trip accuracy verification
 - Coordinate range validation
 
+## Phase 4 Achievements
+
+Phase 4 successfully implements lunar calculations and orbital mechanics:
+
+### Lunar Calculations
+1. **Lunar Position** - Accurate Moon position using Jean Meeus's algorithms
+   - Accounts for major perturbations from Sun and Earth
+   - Includes 10+ perturbation terms for longitude and latitude
+   - Achieves ~0.1° accuracy for most purposes
+   
+2. **Lunar Rise/Set Times** - Calculate moonrise and moonset
+   - Similar algorithm to solar rise/set but accounts for Moon's faster motion (~13°/day)
+   - Handles different lunar angular diameter (0.25° vs Sun's 0.267°)
+   - Works at all latitudes (polar regions handled correctly)
+
+### Orbital Mechanics
+1. **Kepler's Equation Solver** - Converts mean anomaly to true anomaly
+   - Uses Newton-Raphson iteration for accurate convergence
+   - Handles circular to highly eccentric orbits (e < 1)
+   - Converges to 10⁻¹⁰ precision in typically < 5 iterations
+
+2. **Orbital Period** - Kepler's Third Law implementation
+   - T = 2π√(a³/μ) for any two-body system
+   - Verified with Earth's orbit (~1 year) and ISS orbit (~90 minutes)
+   
+3. **Elements to State Vectors** - Full orbital element conversion
+   - Converts 6 classical orbital elements to position/velocity vectors
+   - Implements proper rotation matrices (perifocal to inertial frame)
+   - Conserves orbital energy (verified in tests)
+   - Handles all orbital geometries (inclined, eccentric, etc.)
+
+### Key Features
+- **Perturbation Theory**: Lunar calculations include solar perturbations
+- **Energy Conservation**: Orbital mechanics preserve physical laws
+- **Robust Numerics**: Newton-Raphson with proper convergence criteria
+- **Comprehensive Testing**: 29 unit tests covering all edge cases
+
+### Physical Constants
+- Earth's GM: 398,600 km³/s²
+- Sun's GM: 1.32712440018×10¹¹ km³/s²
+- J2000.0 epoch: JD 2451545.0 (Jan 1, 2000 12:00 UTC)
+
 ## Next Phase
 Future phases will implement:
-- Lunar position calculations (more complex than solar due to orbital perturbations)
-- Orbital mechanics (elements to state vectors, Kepler's equations)
 - ECEF ↔ ECI transformations (Earth-fixed to inertial frames)
-- More celestial objects (planets, stars from catalogs)
+- Planet positions (using VSOP87 or simplified algorithms)
+- Orbital propagation (SGP4 for satellites)
+- More coordinate systems (Galactic, Ecliptic)
 
 ---
 
 **Important**: Remember to commit and push to GitHub after each phase completion!
-
