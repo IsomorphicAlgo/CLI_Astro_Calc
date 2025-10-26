@@ -4,7 +4,7 @@ use cli_astro_calc::Result;
 /// A command-line astronomy and orbital mechanics calculator
 #[derive(Parser)]
 #[command(name = "cli-astro-calc")]
-#[command(about = "A Swiss Army knife for space calculations")]
+#[command(about = "An Astrological Calculator and exploration into RUST")]
 #[command(version)]
 struct Cli {
     #[command(subcommand)]
@@ -32,6 +32,8 @@ enum Commands {
         latitude: f64,
         #[arg(short = 'o', long)]
         longitude: f64,
+        #[arg(short, long)]
+        date: Option<String>,
     },
     Position {
         #[arg(short, long)]
@@ -83,8 +85,13 @@ fn main() -> Result<()> {
                 }
             }
         },
-        Commands::RiseSet { object, latitude, longitude } => {
-            let date_time = chrono::Utc::now();
+        Commands::RiseSet { object, latitude, longitude, date } => {
+            let date_time = if let Some(date_str) = date {
+                parse_date_time(&date_str, None)?
+            } else {
+                chrono::Utc::now()
+            };
+            
             let location = cli_astro_calc::celestial::ObserverLocation {
                 latitude,
                 longitude,

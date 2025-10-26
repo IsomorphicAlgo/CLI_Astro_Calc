@@ -82,9 +82,14 @@ cargo run -- --help
 
 # Working examples with real calculations:
 
-# Calculate sunrise/sunset times for New York
+# Calculate sunrise/sunset times for today
 cargo run -- rise-set --object "sun" --latitude 40.7128 --longitude=-74.0060
-# Output: Rise time: 2025-10-26 11:24:17 UTC, Set time: 2025-10-26 22:04:26 UTC
+
+# For a specific date (Seattle on Christmas)
+cargo run -- rise-set --object "sun" --latitude 47.6061 --longitude=-122.3328 --date "2024-12-25"
+
+# Moon rise/set (note: west longitudes are negative)
+cargo run -- rise-set --object "moon" --latitude 47.6061 --longitude=-122.3328 --date "2024-06-21"
 
 # Calculate solar position for a specific date
 cargo run -- position --object "sun" --date "2024-06-21"
@@ -136,112 +141,3 @@ cargo test
 - [Orbital Elements](https://en.wikipedia.org/wiki/Orbital_elements) - Classical six elements
 - [Orbital State Vectors](https://en.wikipedia.org/wiki/Orbital_state_vectors) - Position and velocity
 
-## Development Notes
-
-- All calculations are currently placeholder implementations
-- Error handling is set up with custom error types
-- Logging is configured for debugging and monitoring
-- The project follows Rust best practices with proper module organization
-- Each calculation module is documented with function descriptions
-
-## Phase 2 Achievements
-
-Phase 2 has been successfully completed with the following implementations:
-
-### Implemented Calculations
-1. **Julian Date** - Converts calendar dates to continuous day count (astronomical standard)
-2. **Sidereal Time** - GMST and LST calculations for stellar observations
-3. **Solar Position** - Accurate RA/Dec coordinates using astronomical algorithms
-4. **Rise/Set Times** - Calculates sunrise/sunset for any location on Earth
-
-### Astronomical Accuracy
-- **Seasonal Variation**: Correctly models Sun's annual motion
-- **Solstice Values**: Winter (-23.4°) and Summer (+23.4°) declinations verified
-- **Polar Regions**: Handles midnight sun and polar night conditions
-- **Refraction**: Accounts for atmospheric light bending (-0.833°)
-
-### Testing
-All calculations have comprehensive unit tests verifying astronomical accuracy:
-- Julian Date: J2000.0 epoch verification
-- Sidereal Time: GMST/LST calculations  
-- Solar Position: Solstice and equinox validation
-- Rise/Set Times: Range and polar condition checks
-
-## Phase 3 Achievements
-
-Phase 3 successfully implements coordinate system transformations:
-
-### Coordinate Conversions
-1. **RA/Dec → Alt/Az** - Transforms equatorial coordinates (celestial sphere) to horizontal coordinates (observer's local sky)
-   - Uses spherical trigonometry for accurate transformations
-   - Accounts for observer latitude and Local Sidereal Time
-   - Essential for telescope pointing and sky observation
-
-2. **Alt/Az → RA/Dec** - Inverse transformation from local to celestial coordinates
-   - Enables tracking celestial objects from local observations
-   - Critical for converting telescope positions to star catalog coordinates
-
-### Key Features
-- **Real-time Calculations**: Uses current time and LST for accurate conversions
-- **Observer Location**: Defaults to New York (40.7128°N, 74.0060°W) for demonstrations
-- **Formatted Output**: Displays coordinates in both decimal degrees/hours and HMS/DMS format
-- **Edge Case Handling**: Properly handles horizon, zenith, and pole singularities
-
-### Testing & Validation
-- Comprehensive unit tests for both conversion directions
-- Zenith and horizon position tests
-- Round-trip accuracy verification
-- Coordinate range validation
-
-## Phase 4 Achievements
-
-Phase 4 successfully implements lunar calculations and orbital mechanics:
-
-### Lunar Calculations
-1. **Lunar Position** - Accurate Moon position using Jean Meeus's algorithms
-   - Accounts for major perturbations from Sun and Earth
-   - Includes 10+ perturbation terms for longitude and latitude
-   - Achieves ~0.1° accuracy for most purposes
-   
-2. **Lunar Rise/Set Times** - Calculate moonrise and moonset
-   - Similar algorithm to solar rise/set but accounts for Moon's faster motion (~13°/day)
-   - Handles different lunar angular diameter (0.25° vs Sun's 0.267°)
-   - Works at all latitudes (polar regions handled correctly)
-
-### Orbital Mechanics
-1. **Kepler's Equation Solver** - Converts mean anomaly to true anomaly
-   - Uses Newton-Raphson iteration for accurate convergence
-   - Handles circular to highly eccentric orbits (e < 1)
-   - Converges to 10⁻¹⁰ precision in typically < 5 iterations
-
-2. **Orbital Period** - Kepler's Third Law implementation
-   - T = 2π√(a³/μ) for any two-body system
-   - Verified with Earth's orbit (~1 year) and ISS orbit (~90 minutes)
-   
-3. **Elements to State Vectors** - Full orbital element conversion
-   - Converts 6 classical orbital elements to position/velocity vectors
-   - Implements proper rotation matrices (perifocal to inertial frame)
-   - Conserves orbital energy (verified in tests)
-   - Handles all orbital geometries (inclined, eccentric, etc.)
-
-### Key Features
-- **Perturbation Theory**: Lunar calculations include solar perturbations
-- **Energy Conservation**: Orbital mechanics preserve physical laws
-- **Robust Numerics**: Newton-Raphson with proper convergence criteria
-- **Comprehensive Testing**: 29 unit tests covering all edge cases
-
-### Physical Constants
-- Earth's GM: 398,600 km³/s²
-- Sun's GM: 1.32712440018×10¹¹ km³/s²
-- J2000.0 epoch: JD 2451545.0 (Jan 1, 2000 12:00 UTC)
-
-## Next Phase
-Future phases will implement:
-- ECEF ↔ ECI transformations (Earth-fixed to inertial frames)
-- Planet positions (using VSOP87 or simplified algorithms)
-- Orbital propagation (SGP4 for satellites)
-- More coordinate systems (Galactic, Ecliptic)
-
----
-
-**Important**: Remember to commit and push to GitHub after each phase completion!
