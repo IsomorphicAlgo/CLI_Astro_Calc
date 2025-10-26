@@ -1,0 +1,22 @@
+[package]
+name = "cli-astro-calc"
+version = "0.1.0"
+edition = "2021"
+authors = ["MichaelHansen"]
+description = "A command-line astronomy and orbital mechanics calculator"
+license = "MIT"
+repository = "https://github.com/IsomorphicAlgo/cli-astro-calc"
+keywords = ["astronomy", "orbital-mechanics", "cli", "calculations"]
+categories = ["command-line-utilities", "science"]
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+log = "0.4"
+env_logger = "0.10"
+anyhow = "1.0"
+thiserror = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+criterion = "0.5"
