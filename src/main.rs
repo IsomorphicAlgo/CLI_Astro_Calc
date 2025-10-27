@@ -204,7 +204,7 @@ fn parse_and_convert_radec_to_altaz(coords: &str) -> Result<cli_astro_calc::coor
     
     let jd = julian_date(chrono::Utc::now());
     let gmst = greenwich_mean_sidereal_time(jd);
-    let (lat, lon) = (40.7128, -74.0060);
+    let (lat, lon) = (47.9088, -122.2503);
     let lst = local_sidereal_time(gmst, lon);
     
     ra_dec_to_alt_az(RaDec { ra, dec }, lat, lon, lst)
@@ -226,7 +226,7 @@ fn parse_and_convert_altaz_to_radec(coords: &str) -> Result<cli_astro_calc::coor
     
     let jd = julian_date(chrono::Utc::now());
     let gmst = greenwich_mean_sidereal_time(jd);
-    let (lat, lon) = (40.7128, -74.0060);
+    let (lat, lon) = (47.9088, -122.2503);
     let lst = local_sidereal_time(gmst, lon);
     
     alt_az_to_ra_dec(AltAz { alt, az }, lat, lon, lst)

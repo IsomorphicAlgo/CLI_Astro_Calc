@@ -71,6 +71,8 @@ CLI_Astro_Calc/
 
 ## Usage
 
+Default location is Everett WA 47.90879667196036, -122.25035871889084
+
 ```bash
 # Build
 cargo build
@@ -155,14 +157,14 @@ Convert between equatorial (RA/Dec) and horizontal (Alt/Az) coordinate systems.
 
 **Examples:**
 ```bash
-# Convert RA/Dec to Alt/Az (uses current time and New York location)
+# Convert RA/Dec to Alt/Az (uses current time and default location: 47.9088°N, 122.2503°W)
 cargo run -- convert --from ra-dec --to alt-az --coords "12.5,45.0"
-# Output: Alt: +32°36'06", Az: 056°09'08"
 
 # Convert Alt/Az to RA/Dec
 cargo run -- convert --from alt-az --to ra-dec --coords "45.0,180.0"
-# Output: RA: 07:03:25, Dec: -04°17'13"
 ```
+
+**Note:** Outputs vary based on current time and observer location (hardcoded as 47.9088°N, 122.2503°W).
 
 ### 5. `orbital` - Orbital Mechanics (Basic)
 Display orbital elements (full state vector conversion coming soon).
