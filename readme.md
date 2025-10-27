@@ -75,32 +75,108 @@ CLI_Astro_Calc/
 # Build
 cargo build
 
-### Run
-```bash
-# Show help
-cargo run -- --help
-
-# Working examples with real calculations:
-
-# Calculate sunrise/sunset times for today
-cargo run -- rise-set --object "sun" --latitude 40.7128 --longitude=-74.0060
-
-# For a specific date (Seattle on Christmas)
-cargo run -- rise-set --object "sun" --latitude 47.6061 --longitude=-122.3328 --date "2024-12-25"
-
-# Moon rise/set (note: west longitudes are negative)
-cargo run -- rise-set --object "moon" --latitude 47.6061 --longitude=-122.3328 --date "2024-06-21"
-
-# Calculate solar position for a specific date
-cargo run -- position --object "sun" --date "2024-06-21"
-# Output: RA: 06:02:52, Dec: +23:26:02 (summer solstice)
-
-# Calculate Julian Date and sidereal time
-cargo run -- time --date "2024-01-01" --time "12:00:00"
-cargo run -- convert --from ra-dec --to alt-az --coords "12.5,45.0"
-
 # Test
 cargo test
+
+# Show all commands
+cargo run -- --help
+```
+
+## Available Commands
+
+### 1. `rise-set` - Calculate Rise/Set Times
+Calculate when the Sun or Moon rises and sets at a specific location.
+
+**Parameters:**
+- `--object` or `-j`: Object name ("sun" or "moon")
+- `--latitude` or `-a`: Observer latitude in degrees (positive = North, negative = South)
+- `--longitude` or `-o`: Observer longitude in degrees (positive = East, negative = West)
+- `--date` or `-d`: (Optional) Date in YYYY-MM-DD format (defaults to today)
+
+**Examples:**
+```bash
+# Sunrise/sunset in New York today
+cargo run -- rise-set --object "sun" --latitude 40.7128 --longitude=-74.0060
+
+# Sunrise/sunset in Seattle on Christmas 2024
+cargo run -- rise-set --object "sun" --latitude 47.6061 --longitude=-122.3328 --date "2024-12-25"
+
+# Moonrise/moonset on summer solstice
+cargo run -- rise-set --object "moon" --latitude 47.6061 --longitude=-122.3328 --date "2024-06-21"
+```
+
+### 2. `position` - Calculate Celestial Object Position
+Calculate the Right Ascension and Declination of the Sun or Moon.
+
+**Parameters:**
+- `--object` or `-o`: Object name ("sun" or "moon")
+- `--date` or `-d`: Date in YYYY-MM-DD format
+
+**Examples:**
+```bash
+# Sun position on summer solstice
+cargo run -- position --object "sun" --date "2024-06-21"
+# Output: RA: 06:02:52, Dec: +23:26:02
+
+# Moon position on a specific date
+cargo run -- position --object "moon" --date "2024-01-01"
+# Output: RA: 10:58:11, Dec: +10:02:27
+```
+
+### 3. `time` - Calculate Julian Date and Sidereal Time
+Convert calendar dates to Julian Date and calculate Greenwich Mean Sidereal Time.
+
+**Parameters:**
+- `--date` or `-d`: Date in YYYY-MM-DD format
+- `--time` or `-t`: (Optional) Time in HH:MM:SS format (defaults to 12:00:00)
+
+**Examples:**
+```bash
+# Julian Date at noon
+cargo run -- time --date "2024-01-01"
+# Output: JD: 2460311.500000, GMST: 06:44:33
+
+# Julian Date at specific time
+cargo run -- time --date "2024-01-01" --time "18:30:45"
+# Output: JD: 2460311.271354, GMST: 01:14:24
+```
+
+### 4. `convert` - Coordinate System Conversions
+Convert between equatorial (RA/Dec) and horizontal (Alt/Az) coordinate systems.
+
+**Parameters:**
+- `--from` or `-f`: Source coordinate system ("ra-dec" or "alt-az")
+- `--to` or `-t`: Target coordinate system ("alt-az" or "ra-dec")
+- `--coords` or `-c`: Coordinates to convert
+
+**Coordinate Formats:**
+- RA/Dec: "hours,degrees" (e.g., "12.5,45.0")
+- Alt/Az: "altitude,azimuth" in degrees (e.g., "45.0,180.0")
+
+**Examples:**
+```bash
+# Convert RA/Dec to Alt/Az (uses current time and New York location)
+cargo run -- convert --from ra-dec --to alt-az --coords "12.5,45.0"
+# Output: Alt: +32°36'06", Az: 056°09'08"
+
+# Convert Alt/Az to RA/Dec
+cargo run -- convert --from alt-az --to ra-dec --coords "45.0,180.0"
+# Output: RA: 07:03:25, Dec: -04°17'13"
+```
+
+### 5. `orbital` - Orbital Mechanics (Basic)
+Display orbital elements (full state vector conversion coming soon).
+
+**Parameters:**
+- `--semi-major` or `-s`: Semi-major axis in km
+- `--eccentricity` or `-e`: Orbital eccentricity (0-1)
+- `--inclination` or `-i`: Orbital inclination in degrees
+
+**Example:**
+```bash
+# ISS-like orbit
+cargo run -- orbital --semi-major 6778 --eccentricity 0.0001 --inclination 51.6
+# Output: Orbital: a=6778 km, e=0.0001, i=51.6°
 ```
 
 ## Formula Reference
