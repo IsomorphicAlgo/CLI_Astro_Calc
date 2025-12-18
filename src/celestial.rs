@@ -5,6 +5,7 @@ use chrono::{DateTime, Utc};
 pub enum CelestialObject {
     Sun,
     Moon,
+    Planet(crate::planets::Planet),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -28,6 +29,12 @@ pub fn calculate_rise_set_times(
     match object {
         CelestialObject::Sun => calculate_solar_rise_set(location, date),
         CelestialObject::Moon => calculate_lunar_rise_set(location, date),
+        CelestialObject::Planet(_) => {
+            // Planet rise/set times not yet implemented
+            Err(crate::AstroError::CalculationError(
+                "Planet rise/set times not yet implemented".to_string()
+            ))
+        }
     }
 }
 
@@ -107,6 +114,11 @@ pub fn calculate_position(object: CelestialObject, date: DateTime<Utc>) -> Resul
     match object {
         CelestialObject::Sun => calculate_solar_position(date),
         CelestialObject::Moon => calculate_lunar_position(date),
+        CelestialObject::Planet(planet) => {
+            use crate::time::julian_date;
+            let jd = julian_date(date);
+            crate::planets::calculate_planet_position(planet, jd)
+        }
     }
 }
 

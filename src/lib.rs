@@ -2,6 +2,7 @@ pub mod coordinates;
 pub mod celestial;
 pub mod time;
 pub mod orbital;
+pub mod planets;
 
 pub mod error {
     use thiserror::Error;

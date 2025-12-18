@@ -357,6 +357,210 @@ Where:
 
 ---
 
+## VSOP87 Planetary Position Theory
+
+### Overview
+VSOP87 (Variations Séculaires des Orbites Planétaires 1987) is a semi-analytical model developed by P. Bretagnon and G. Francou at the Bureau des Longitudes in Paris. It provides precise calculations of planetary positions in the Solar System by representing heliocentric coordinates as sums of periodic terms.
+
+### Mathematical Foundation
+
+#### Series Representation
+Each coordinate (longitude L, latitude B, radius R) is expressed as a series of terms:
+
+**General Form**: `A × cos(B + C × t)`
+
+Where:
+- **A**: Amplitude of the term
+- **B**: Phase (constant term in radians)
+- **C**: Frequency (coefficient for time variable)
+- **t**: Time in Julian centuries from J2000.0
+
+#### Series Structure
+VSOP87 uses multiple series for each coordinate:
+
+**Longitude (L)**:
+```
+L = (L0 + L1×t + L2×t² + L3×t³ + L4×t⁴ + L5×t⁵) / 10^8
+```
+
+**Latitude (B)**:
+```
+B = (B0 + B1×t + B2×t² + B3×t³ + B4×t⁴) / 10^8
+```
+
+**Radius (R)**:
+```
+R = (R0 + R1×t + R2×t² + R3×t³ + R4×t⁴) / 10^8 (in AU)
+```
+
+Each series (L0, L1, etc.) is itself a sum of terms: `Σ(A × cos(B + C × t))`
+
+### VSOP87 Variants
+
+VSOP87 offers several versions for different applications:
+
+- **VSOP87**: Heliocentric ecliptic orbital elements (equinox J2000.0)
+- **VSOP87A**: Heliocentric ecliptic rectangular coordinates (equinox J2000.0)
+- **VSOP87B**: Heliocentric ecliptic spherical coordinates (equinox J2000.0) - **Used in this implementation**
+- **VSOP87C**: Heliocentric ecliptic rectangular coordinates (equinox of date)
+- **VSOP87D**: Heliocentric ecliptic spherical coordinates (equinox of date)
+- **VSOP87E**: Barycentric ecliptic rectangular coordinates (equinox J2000.0)
+
+### Implementation Approach
+
+**Decision**: Implement simplified VSOP87 (truncated series)
+
+**Rationale**:
+- Custom implementation demonstrates deeper understanding of the theory
+- Portfolio project benefits from showing implementation skills
+- Simplified version uses most significant terms (can be extended to full VSOP87)
+- Full VSOP87 contains thousands of terms per planet; truncated version is more manageable
+
+**Accuracy Expectations**:
+- **Simplified VSOP87** (truncated series):
+  - Inner planets (Mercury, Venus, Mars): ~1 arcminute
+  - Outer planets (Jupiter, Saturn): ~1-2 arcminutes
+  - Distant planets (Uranus, Neptune): ~2-5 arcminutes
+- **Full VSOP87**: <1 arcsecond for all planets
+
+### Coordinate Conversion Pipeline
+
+1. **Heliocentric Ecliptic (L, B, R)**: Raw VSOP87 output
+   - L: Ecliptic longitude (radians)
+   - B: Ecliptic latitude (radians)
+   - R: Radius vector (Astronomical Units)
+
+2. **Heliocentric Equatorial**: Convert ecliptic to equatorial
+   - Apply rotation using obliquity of the ecliptic
+   - Time-dependent obliquity: `ε = 23.439291° - 0.0130042° × t - ...`
+
+3. **Geocentric Equatorial**: Account for Earth's position
+   - Calculate Earth's heliocentric position using VSOP87
+   - Subtract Earth's position vector from planet's position
+   - Optional: Apply light-time correction for high precision
+
+4. **Final Output (RA, Dec)**: Geocentric equatorial coordinates
+   - Right Ascension (hours)
+   - Declination (degrees)
+
+### Data Sources
+
+- **Official VSOP87 Data**: Available from IMCCE (Institut de Mécanique Céleste et de Calcul des Éphémérides)
+  - FTP Server: https://ftp.imcce.fr/pub/ephem/planets/vsop87/
+  - Provides complete VSOP87 coefficient files for all planets
+- **Truncated Coefficients**: Simplified versions for reduced computational load
+  - VSOP87 Multi-Language project provides truncated versions at different precision levels
+  - Truncation eliminates terms with coefficients below threshold (e.g., < 1/1000 of largest term)
+- **Validation**: Compare results with JPL Horizons ephemeris service
+
+### Coefficient Data Structure
+
+#### Storage Strategy
+**Decision**: Compile-time constants (const arrays)
+
+**Rationale**:
+- **Performance**: No runtime loading overhead, data embedded in binary
+- **Simplicity**: No file I/O required, easier deployment
+- **Type Safety**: Compile-time validation of data structure
+- **Memory Efficiency**: Data stored as static arrays, shared across instances
+
+**Alternative Considered**: File-based loading
+- Pros: Easier to update coefficients without recompiling
+- Cons: Runtime overhead, file dependency, more complex error handling
+- Decision: Use compile-time constants for initial implementation; can add file loading later
+
+#### Coefficient Format
+
+Each VSOP87 term is stored as a `Vsop87Term` structure:
+
+```rust
+struct Vsop87Term {
+    amplitude: f64,  // A: Coefficient magnitude
+    phase: f64,      // B: Phase angle (radians)
+    frequency: f64,  // C: Frequency term
+}
+```
+
+**Example Term**:
+- Amplitude: `4.40250710144` (arcseconds for L, radians for B, AU for R)
+- Phase: `0.0` (radians)
+- Frequency: `26087.90314157420` (for Mercury's main orbital frequency)
+
+**Series Organization**:
+- Each planet has three `Vsop87Series`: longitude (L), latitude (B), radius (R)
+- Each series contains 3-6 sub-series (L0-L5, B0-B4, R0-R4)
+- Each sub-series is a `Vec<Vsop87Term>` containing all terms for that series
+
+**Data Structure Example** (Mercury - simplified):
+```
+PlanetVsop87Data {
+    longitude: Vsop87Series {
+        series_0: [term1, term2, term3, ...],  // L0: ~10-20 terms (truncated)
+        series_1: [term1, term2, ...],         // L1: ~5-10 terms
+        series_2: [term1, term2, ...],         // L2: ~3-5 terms
+        series_3: [term1, ...],                // L3: ~1-3 terms
+        series_4: Some([term1, ...]),          // L4: ~1 term
+        series_5: Some([term1, ...]),          // L5: ~1 term
+    },
+    latitude: Vsop87Series {
+        series_0: [term1, term2, ...],         // B0: ~5-10 terms
+        series_1: [term1, ...],                // B1: ~1-3 terms
+        series_2: [],                          // B2: minimal
+        series_3: [],                          // B3: minimal
+        series_4: None,                        // B4: not used
+        series_5: None,                        // B5: not used
+    },
+    radius: Vsop87Series {
+        series_0: [term1, term2, ...],         // R0: ~5-10 terms
+        series_1: [term1, ...],                // R1: ~1-3 terms
+        series_2: [],                          // R2: minimal
+        series_3: [],                          // R3: minimal
+        series_4: None,                        // R4: not used
+        series_5: None,                        // R5: not used
+    },
+}
+```
+
+**Full vs Truncated**:
+- **Full VSOP87**: Mercury has ~500-1000 terms per series (L0 alone has ~500 terms)
+- **Truncated (this implementation)**: Uses ~10-20 largest terms per series
+- **Accuracy Trade-off**: Truncated provides ~1 arcminute vs <1 arcsecond for full
+
+#### Coefficient Acquisition Process
+
+1. **Source Selection**: 
+   - Primary: IMCCE official VSOP87 files
+   - Alternative: VSOP87 Multi-Language project (truncated versions)
+
+2. **Data Processing**:
+   - Parse VSOP87 file format (typically space-separated: A B C)
+   - Filter terms by amplitude threshold (for truncated version)
+   - Organize by planet, variable (L/B/R), and series (0-5)
+
+3. **Storage Implementation**:
+   - Convert parsed data to Rust `Vsop87Term` structures
+   - Organize into `Vsop87Series` and `PlanetVsop87Data`
+   - Embed as const arrays in source code
+
+4. **Validation**:
+   - Verify coefficient ranges are reasonable
+   - Check series structure matches expected format
+   - Test with known reference values (J2000.0 epoch)
+
+### Research Findings
+
+**Available Rust Crates**:
+- `vsop87` crate exists and provides full VSOP87 implementation
+- `siderust` crate offers comprehensive astronomical computations
+- `astro` crate provides planetary positioning algorithms
+
+**Decision**: Implement custom simplified version to demonstrate:
+- Understanding of VSOP87 mathematical theory
+- Ability to implement complex astronomical algorithms
+- Software engineering skills (data structures, algorithms, testing)
+
+---
+
 ## References
 
 This program implements algorithms based on:
@@ -364,5 +568,7 @@ This program implements algorithms based on:
 - **IAU Standards**: International Astronomical Union conventions for coordinate systems
 - **Kepler's Laws**: Classical orbital mechanics
 - **Spherical Trigonometry**: Coordinate transformation mathematics
+- **VSOP87 Theory**: P. Bretagnon and G. Francou - Planetary ephemeris theory
+- **JPL Horizons**: NASA/JPL ephemeris service for validation
 
 All calculations are verified against authoritative sources and include comprehensive test coverage.

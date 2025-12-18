@@ -94,7 +94,7 @@ pub fn alt_az_to_ra_dec(alt_az: AltAz, observer_lat: f64, _observer_lon: f64, ls
 #[cfg(test)]
 pub(crate) use rotation_matrix_z_impl as rotation_matrix_z;
 
-fn rotation_matrix_z_impl(angle_rad: f64) -> [[f64; 3]; 3] {
+pub(crate) fn rotation_matrix_z_impl(angle_rad: f64) -> [[f64; 3]; 3] {
     let cos_theta = angle_rad.cos();
     let sin_theta = angle_rad.sin();
     
@@ -624,7 +624,7 @@ mod tests {
         let angles = [0.0, 45.0, 90.0, 180.0, 270.0, 360.0];
         
         for angle_deg in angles.iter() {
-            let angle_rad = angle_deg.to_radians();
+            let angle_rad = (*angle_deg as f64).to_radians();
             let r = rotation_matrix_z(angle_rad);
             
             // Calculate determinant: det(R_z) = cos²(θ) + sin²(θ) = 1

@@ -20,6 +20,26 @@ This project is part of a two-component portfolio system designed to showcase sk
 - Features: local caching, historical data storage, rate limiting, authentication
 - Deployment: Self-hosted on personal server rack
 
+### Server Infrastructure
+
+**Hardware Specifications:**
+- **CPU**: 2x 8-core 8-thread Xeon processors
+- **Memory**: 32GB DDR4 ECC (Error-Correcting Code)
+- **Storage**: SAS3 12-drive backplane
+- **Network**: 4x 10G RJ45 ports
+- **Management**: IPMI (Intelligent Platform Management Interface)
+- **Power**: Redundant 800W PSUs
+- **Expansion**: Room for multiple GPUs if needed
+
+**Operating System Requirements:**
+- Need to select or create an operating system suitable for hosting:
+  - Rust CLI application (Part 1)
+  - REST API service (Part 2 - Space Weather)
+  - Database (SQLite or PostgreSQL for historical data)
+  - Web server capabilities
+  - Container support (optional, for deployment flexibility)
+- Considerations: Linux distribution (Ubuntu Server, Debian, or custom), containerization (Docker/Kubernetes), or bare-metal deployment
+
 ### Purpose
 
 This project serves as a portfolio demonstration of:
@@ -181,58 +201,76 @@ Session 2 focuses on implementing two major features:
 
 ---
 
-## Part 2: Space Weather Web Service (Coming Next)
-
-### Overview
-A REST API service for fetching, caching, and serving space weather data critical for satellite operations. This service will complement the CLI tool by providing real-time and historical space weather information.
-
-### Planned Features
-- **Data Fetching**: Integration with NOAA Space Weather API and similar sources
-- **Local Caching**: Reduce API calls and improve response times
-- **REST Endpoints**: Clean API for querying current conditions and historical data
-- **Data Storage**: Historical data storage in SQLite or PostgreSQL
-- **Production Features**: Rate limiting and authentication
-- **Deployment**: Self-hosted on personal server rack
-
-### Use Cases
-- Satellite operators monitoring space weather conditions
-- Mission planning based on historical space weather patterns
-- Real-time alerts for solar flares and geomagnetic storms
-- Radiation level monitoring for space missions
-
 ---
 
 #### Part B: Planet Positions (VSOP87)
 
-**Step B1: Research & Design** ⏳
-- [ ] Research VSOP87 theory
-  - Understand VSOP87 series representation
-  - Review available VSOP87 data sources
-  - Decide on implementation approach:
-    - Option 1: Use existing Rust crate (if available)
-    - Option 2: Implement simplified VSOP87 (truncated series)
-    - Option 3: Use alternative theory (ELP2000 for Moon, simplified planetary)
-- [ ] Design data structures
-  - `Planet` enum (Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune)
-  - VSOP87 coefficient storage (consider const arrays or lazy_static)
-  - Position result structure (heliocentric coordinates)
-- [ ] Design function signatures in `celestial.rs` or new `planets.rs`
-  - `calculate_planet_position(planet: Planet, jd: f64) -> Result<RaDec>`
-  - Helper functions for VSOP87 series evaluation
-- [ ] Define test cases
-  - Known planet positions at specific epochs
-  - Comparison with JPL Horizons or similar authoritative sources
-  - Accuracy requirements (arcseconds for major planets)
+**Step B1: Research & Design** ✅ (Completed)
+- ✅ Research VSOP87 theory
+  - ✅ Understand VSOP87 series representation: A × cos(B + C × t) where t is Julian centuries from J2000.0
+  - ✅ Review available VSOP87 data sources: Official VSOP87 data files available from IMCCE
+  - ✅ Decide on implementation approach:
+    - **Decision: Implement simplified VSOP87 (truncated series)**
+    - Rationale: For portfolio demonstration, implementing our own (even simplified) shows deeper understanding
+    - Alternative `vsop87` crate exists but custom implementation better demonstrates skills
+    - Will use truncated series (fewer terms) for initial implementation, can be extended later
+    - Full VSOP87 contains thousands of terms per planet; simplified version uses most significant terms
+- ✅ Design data structures
+  - ✅ `Planet` enum (Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune)
+  - ✅ `Vsop87Term` struct for individual series terms (amplitude, phase, frequency)
+  - ✅ `Vsop87Series` struct for series L0-L5, B0-B4, R0-R4
+  - ✅ `PlanetVsop87Data` struct containing longitude, latitude, and radius series
+  - ✅ `HeliocentricEcliptic` struct for intermediate coordinates (L, B, R)
+  - ✅ Coefficient storage: Will use const arrays for compile-time data (efficient, no runtime loading)
+- ✅ Design function signatures in `planets.rs`
+  - ✅ `calculate_planet_position(planet: Planet, jd: f64) -> Result<RaDec>` - Main public API
+  - ✅ `evaluate_vsop87_series(series: &Vsop87Series, t: f64) -> f64` - Series evaluator
+  - ✅ `evaluate_vsop87_term(term: &Vsop87Term, t: f64) -> f64` - Individual term evaluator
+  - ✅ `heliocentric_to_geocentric(...) -> Result<RaDec>` - Coordinate conversion
+  - ✅ `get_planet_vsop87_data(planet: Planet) -> Option<PlanetVsop87Data>` - Data accessor
+- ✅ Extend `CelestialObject` enum to include `Planet(Planet)` variant
+- ✅ Define test cases
+  - ✅ Test planet name parsing and enum functionality
+  - ✅ Test VSOP87 term evaluation (cosine calculations)
+  - ✅ Known planet positions at J2000.0 epoch (reference: JPL Horizons)
+  - ✅ Accuracy requirements:
+    - Inner planets (Mercury, Venus, Mars): ~1 arcminute (simplified) vs <1 arcsecond (full)
+    - Outer planets (Jupiter, Saturn): ~1-2 arcminutes (simplified) vs <1 arcsecond (full)
+    - Distant planets (Uranus, Neptune): ~2-5 arcminutes (simplified) vs <1 arcsecond (full)
 
-**Step B2: VSOP87 Data Acquisition** ⏳
-- [ ] Obtain VSOP87 coefficients
-  - Download from official VSOP87 source or use truncated version
-  - Consider starting with simplified model (fewer terms) for initial implementation
-  - Organize coefficients by planet and variable (L, B, R)
-- [ ] Create coefficient storage structure
-  - Design efficient storage (arrays, const data)
-  - Consider file-based loading vs compile-time constants
-  - Document coefficient format and source
+**Implementation Details:**
+- Created `src/planets.rs` module with complete data structure design
+- VSOP87 series formula: `(L0 + L1×t + L2×t² + L3×t³ + L4×t⁴ + L5×t⁵) / 10^8`
+- Each series term: `A × cos(B + C × t)` where t = Julian centuries from J2000.0
+- Coordinate conversion: Heliocentric ecliptic (L, B, R) → Geocentric equatorial (RA, Dec)
+- Integration with existing `CelestialObject` enum for unified API
+- Placeholder implementations ready for Step B2 (data acquisition) and B3 (core implementation)
+
+**Step B2: VSOP87 Data Acquisition** ✅ (Completed)
+- ✅ Obtain VSOP87 coefficients
+  - ✅ Researched official VSOP87 source (IMCCE FTP server)
+  - ✅ Selected truncated/simplified version for initial implementation
+  - ✅ Organized coefficients by planet and variable (L, B, R)
+  - ✅ Implemented Mercury coefficients as proof of concept
+  - ✅ Created placeholder functions for other planets
+- ✅ Create coefficient storage structure
+  - ✅ Designed efficient storage using const arrays (compile-time constants)
+  - ✅ Implemented `Vsop87Term`, `Vsop87Series`, and `PlanetVsop87Data` structures
+  - ✅ Created `get_planet_vsop87_data()` function with planet-specific data accessors
+  - ✅ Documented coefficient format and source in code comments
+- ✅ **📚 Educational Summary**: Added VSOP87 data structure explanation to OVERVIEW.md
+  - ✅ Documented coefficient format and organization
+  - ✅ Explained storage strategy (compile-time constants chosen for performance)
+  - ✅ Added examples of coefficient data structure
+  - ✅ Documented data acquisition process and sources
+
+**Implementation Details:**
+- Storage strategy: Compile-time constants (const arrays) for performance and simplicity
+- Data structure: `Vsop87Term` (A, B, C) → `Vsop87Series` (series_0-5) → `PlanetVsop87Data` (L, B, R)
+- Mercury implementation: Complete truncated coefficient set with ~10-20 terms per series
+- Other planets: Placeholder structure ready for coefficient population
+- Tests: 6 tests passing, verifying data structure and coefficient access
+- Documentation: Comprehensive inline docs and OVERVIEW.md section on coefficient storage
 
 **Step B3: Core Implementation - VSOP87 Evaluation** ⏳
 - [ ] Implement VSOP87 series evaluator
@@ -250,6 +288,11 @@ A REST API service for fetching, caching, and serving space weather data critica
 - [ ] Implement R (radius) calculation
   - Evaluate R0, R1, R2, R3, R4 series
   - Combine series (in AU)
+- [ ] **📚 Educational Summary**: Add VSOP87 evaluation algorithms to OVERVIEW.md
+  - Document series evaluation algorithm
+  - Explain time variable (Julian centuries) calculation
+  - Add examples of series combination formula
+  - Document performance considerations
 
 **Step B4: Coordinate Conversion** ⏳
 - [ ] Convert heliocentric ecliptic (L, B, R) to heliocentric equatorial
@@ -261,6 +304,11 @@ A REST API service for fetching, caching, and serving space weather data critica
 - [ ] Convert to RA/Dec
   - Final conversion to equatorial coordinates
   - Return `RaDec` structure
+- [ ] **📚 Educational Summary**: Add coordinate conversion pipeline to OVERVIEW.md
+  - Document heliocentric to geocentric conversion
+  - Explain ecliptic to equatorial transformation
+  - Add formulas for coordinate system conversions
+  - Document light-time correction (if implemented)
 
 **Step B5: Testing & Validation** ⏳
 - [ ] Write unit tests for VSOP87 series evaluation
@@ -278,6 +326,10 @@ A REST API service for fetching, caching, and serving space weather data critica
 - [ ] Performance testing
   - Benchmark planet position calculations
   - Ensure reasonable performance (< 10ms per planet)
+- [ ] **📚 Educational Summary**: Add validation methodology to OVERVIEW.md
+  - Document test strategy and reference sources
+  - Explain accuracy requirements and validation approach
+  - Add performance benchmarks and optimization notes
 
 **Step B6: CLI Integration** ⏳
 - [ ] Extend `position` command to support planets
@@ -289,6 +341,10 @@ A REST API service for fetching, caching, and serving space weather data critica
   - Show planet positions for multiple planets
 - [ ] Update help text and documentation
 - [ ] Add example usage to readme
+- [ ] **📚 Educational Summary**: Add CLI usage examples to OVERVIEW.md
+  - Document planet position command usage
+  - Add examples of planet calculations
+  - Explain output format and interpretation
 
 **Step B7: Logging & Error Handling** ⏳
 - [ ] Add comprehensive logging
@@ -299,6 +355,10 @@ A REST API service for fetching, caching, and serving space weather data critica
   - Validate time arguments (reasonable Julian Date range)
   - Handle missing coefficient data gracefully
   - Provide meaningful error messages for invalid planets
+- [ ] **📚 Educational Summary**: Add error handling patterns to OVERVIEW.md
+  - Document validation strategies
+  - Explain error recovery approaches
+  - Add examples of error handling for edge cases
 
 ---
 
@@ -324,6 +384,11 @@ A REST API service for fetching, caching, and serving space weather data critica
   - Document all public functions
   - Add examples to doc comments
   - Document coordinate system conventions
+- [ ] **📚 Educational Summary**: Finalize OVERVIEW.md with complete VSOP87 documentation
+  - Review and consolidate all VSOP87 sections
+  - Add comprehensive examples and use cases
+  - Document limitations and future enhancements
+  - Create reference section for VSOP87 resources
 
 **Step C3: Final Testing & Validation** ⏳
 - [ ] Run full test suite
@@ -345,6 +410,28 @@ A REST API service for fetching, caching, and serving space weather data critica
 - [ ] Tag release (if using version control)
 
 ---
+
+
+
+## Part 2: Space Weather Web Service (Coming Next)
+
+### Overview
+A REST API service for fetching, caching, and serving space weather data critical for satellite operations. This service will complement the CLI tool by providing real-time and historical space weather information.
+
+### Planned Features
+- **Data Fetching**: Integration with NOAA Space Weather API and similar sources
+- **Local Caching**: Reduce API calls and improve response times
+- **REST Endpoints**: Clean API for querying current conditions and historical data
+- **Data Storage**: Historical data storage in SQLite or PostgreSQL
+- **Production Features**: Rate limiting and authentication
+- **Deployment**: Self-hosted on personal server rack
+
+### Use Cases
+- Satellite operators monitoring space weather conditions
+- Mission planning based on historical space weather patterns
+- Real-time alerts for solar flares and geomagnetic storms
+- Radiation level monitoring for space missions
+
 
 ### Testing Strategy
 
