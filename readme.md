@@ -42,10 +42,292 @@ A command-line astronomy and orbital mechanics calculator built in Rust.
 - ✅ **Elements → State Vectors** - Convert orbital elements to position/velocity
 - ✅ **Comprehensive Testing** - 29 tests covering all functions
 
-### Still To Implement
-- ECEF ↔ ECI transformations
-- Planet positions (using VSOP87 or similar)
+## Session 2 - ECEF/ECI Transformations & Planet Positions
+
+### Overview
+Session 2 focuses on implementing two major features:
+1. **ECEF ↔ ECI Transformations** - Earth-Centered Earth-Fixed to Earth-Centered Inertial coordinate system conversions
+2. **Planet Positions** - Calculate positions of major planets using VSOP87 theory
+
+### Iterative Implementation Plan
+
+#### Part A: ECEF ↔ ECI Transformations
+
+**Step A1: Research & Design** ✅ (Completed)
+- ✅ Research ECEF/ECI transformation mathematics
+  - ✅ Understand rotation matrix based on GMST
+  - ✅ Review IAU-76/FK5 precession-nutation models (documented for future enhancement)
+  - ✅ Document coordinate system conventions (J2000.0 epoch)
+- ✅ Design function signatures in `coordinates.rs`
+  - ✅ `ecef_to_eci(ecef: Ecef, gmst: f64) -> Result<Eci>` - Fully implemented with validation
+  - ✅ `eci_to_ecef(eci: Eci, gmst: f64) -> Result<Ecef>` - Fully implemented with validation
+  - ✅ Helper functions: `rotation_matrix_z()` and `apply_rotation_matrix()`
+- ✅ Define test cases and expected results
+  - ✅ Test structure created for known ECEF/ECI pairs validation
+  - ✅ Round-trip accuracy tests defined
+  - ✅ Edge cases defined (poles, equator, prime meridian, origin, large coordinates)
+  
+**Implementation Details:**
+- Comprehensive documentation added to all functions
+- Input validation (NaN, infinity checks)
+- GMST normalization (0-24 hour range)
+- Coordinate system conventions documented (J2000.0 epoch, units in meters)
+- 15 test cases structured (to be implemented in Step A3)
+
+**Step A2: Core Implementation** ✅ (Completed)
+- ✅ Implement rotation matrix calculation
+  - ✅ Created `rotation_matrix_z(angle_rad: f64) -> [[f64; 3]; 3]` helper
+  - ✅ Uses GMST in radians for rotation angle
+  - ✅ Logs rotation matrix construction (debug level)
+- ✅ Implement `ecef_to_eci` function
+  - ✅ Applies rotation matrix to ECEF coordinates
+  - ✅ Input validation (NaN, infinity checks)
+  - ✅ Logging at info level for transformations (input/output coordinates, GMST)
+- ✅ Implement `eci_to_ecef` function
+  - ✅ Applies rotation matrix to ECI coordinates (inverse transformation)
+  - ✅ Numerical stability ensured (normalized GMST, proper matrix operations)
+  - ✅ Logging at info level for transformations (input/output coordinates, GMST)
+  
+**Implementation Details:**
+- Rotation matrix helper function with debug logging (angle, matrix values)
+- Both transformation functions log at info level:
+  - Input coordinates and GMST (with normalization)
+  - Output coordinates
+- All logging uses appropriate precision for coordinate values
+
+**Step A3: Testing & Validation** ✅ (Completed)
+- ✅ Write unit tests for rotation matrix
+  - ✅ Test 0°, 90°, 180°, 270° rotations (all pass)
+  - ✅ Verify matrix properties (orthogonal, determinant = 1) for multiple angles
+- ✅ Write unit tests for `ecef_to_eci`
+  - ✅ Test known coordinate pairs (Greenwich meridian, poles, equator)
+  - ✅ Test at Greenwich meridian (x-axis in ECEF) at GMST=0 and GMST=6
+  - ✅ Test at different GMST values (0, 6, 12, 18, 23.5 hours)
+  - ✅ Test GMST normalization (25→1, -1→23)
+  - ✅ Test edge cases (origin, large coordinates, invalid inputs)
+- ✅ Write unit tests for `eci_to_ecef`
+  - ✅ Test round-trip accuracy (ECEF → ECI → ECEF)
+  - ✅ Verify accuracy within acceptable tolerance (< 1mm for Earth radius scale)
+  - ✅ Test round-trip at multiple GMST values
+- ✅ Write integration tests
+  - ✅ Test with various coordinate configurations
+  - ✅ Test at multiple time epochs (different GMST values)
+  - ✅ Verify numerical stability for large coordinates (geosynchronous orbit)
+  
+**Test Results:**
+- 15 comprehensive test cases implemented
+- All tests verify accuracy within 1mm tolerance for Earth-scale coordinates
+- Error handling tests for NaN, infinity, and invalid inputs
+- Round-trip tests confirm transformation accuracy
+
+**Step A4: CLI Integration** ⏳
+- [ ] Add `ecef-eci` conversion option to `convert` command
+  - Extend `Commands::Convert` enum
+  - Add coordinate parsing for "x,y,z" format
+  - Add `--gmst` or auto-calculate from current time
+- [ ] Update help text and documentation
+- [ ] Add example usage to readme
+- [ ] Test CLI with various inputs
+
+**Step A5: Logging & Error Handling** ⏳
+- [ ] Add comprehensive logging
+  - Debug: Rotation matrix values, intermediate calculations
+  - Info: Transformation operations, coordinate systems
+  - Warn: Potential numerical issues, large coordinate values
+- [ ] Enhance error handling
+  - Validate input coordinates (reasonable Earth-centered ranges)
+  - Handle edge cases (coordinates at origin, very large values)
+  - Provide meaningful error messages
+
+---
+
+#### Part B: Planet Positions (VSOP87)
+
+**Step B1: Research & Design** ⏳
+- [ ] Research VSOP87 theory
+  - Understand VSOP87 series representation
+  - Review available VSOP87 data sources
+  - Decide on implementation approach:
+    - Option 1: Use existing Rust crate (if available)
+    - Option 2: Implement simplified VSOP87 (truncated series)
+    - Option 3: Use alternative theory (ELP2000 for Moon, simplified planetary)
+- [ ] Design data structures
+  - `Planet` enum (Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune)
+  - VSOP87 coefficient storage (consider const arrays or lazy_static)
+  - Position result structure (heliocentric coordinates)
+- [ ] Design function signatures in `celestial.rs` or new `planets.rs`
+  - `calculate_planet_position(planet: Planet, jd: f64) -> Result<RaDec>`
+  - Helper functions for VSOP87 series evaluation
+- [ ] Define test cases
+  - Known planet positions at specific epochs
+  - Comparison with JPL Horizons or similar authoritative sources
+  - Accuracy requirements (arcseconds for major planets)
+
+**Step B2: VSOP87 Data Acquisition** ⏳
+- [ ] Obtain VSOP87 coefficients
+  - Download from official VSOP87 source or use truncated version
+  - Consider starting with simplified model (fewer terms) for initial implementation
+  - Organize coefficients by planet and variable (L, B, R)
+- [ ] Create coefficient storage structure
+  - Design efficient storage (arrays, const data)
+  - Consider file-based loading vs compile-time constants
+  - Document coefficient format and source
+
+**Step B3: Core Implementation - VSOP87 Evaluation** ⏳
+- [ ] Implement VSOP87 series evaluator
+  - Function to evaluate trigonometric series: `Σ(A * cos(B + C*t))`
+  - Handle time argument (Julian centuries from J2000.0)
+  - Optimize for performance (consider SIMD if beneficial)
+  - Add logging for series evaluation (debug level)
+- [ ] Implement L (longitude) calculation
+  - Evaluate L0, L1, L2, L3, L4, L5 series
+  - Combine series: `L = (L0 + L1*t + L2*t² + ...) / 10^8`
+  - Convert to radians
+- [ ] Implement B (latitude) calculation
+  - Evaluate B0, B1, B2, B3, B4 series
+  - Combine series similarly
+- [ ] Implement R (radius) calculation
+  - Evaluate R0, R1, R2, R3, R4 series
+  - Combine series (in AU)
+
+**Step B4: Coordinate Conversion** ⏳
+- [ ] Convert heliocentric ecliptic (L, B, R) to heliocentric equatorial
+  - Apply ecliptic-to-equatorial rotation
+  - Handle obliquity of the ecliptic (time-dependent)
+- [ ] Convert to geocentric coordinates (optional, for apparent positions)
+  - Account for Earth's position
+  - Apply light-time correction (optional for initial version)
+- [ ] Convert to RA/Dec
+  - Final conversion to equatorial coordinates
+  - Return `RaDec` structure
+
+**Step B5: Testing & Validation** ⏳
+- [ ] Write unit tests for VSOP87 series evaluation
+  - Test with known coefficient sets
+  - Verify trigonometric calculations
+  - Test edge cases (t = 0, large t values)
+- [ ] Write unit tests for each planet
+  - Test Mercury, Venus, Mars at J2000.0
+  - Compare with reference values (JPL Horizons or Meeus)
+  - Verify accuracy (within arcminutes for simplified, arcseconds for full)
+- [ ] Write integration tests
+  - Test multiple planets at same epoch
+  - Test planets at different epochs (past and future)
+  - Round-trip tests (if applicable)
+- [ ] Performance testing
+  - Benchmark planet position calculations
+  - Ensure reasonable performance (< 10ms per planet)
+
+**Step B6: CLI Integration** ⏳
+- [ ] Extend `position` command to support planets
+  - Add planet names to object parsing
+  - Update `CelestialObject` enum or create separate `Planet` enum
+  - Integrate with existing position command structure
+- [ ] Add new `planets` subcommand (optional)
+  - List all available planets
+  - Show planet positions for multiple planets
+- [ ] Update help text and documentation
+- [ ] Add example usage to readme
+
+**Step B7: Logging & Error Handling** ⏳
+- [ ] Add comprehensive logging
+  - Debug: VSOP87 series values, intermediate calculations
+  - Info: Planet calculations, coordinate conversions
+  - Warn: Out-of-range time arguments, potential accuracy issues
+- [ ] Enhance error handling
+  - Validate time arguments (reasonable Julian Date range)
+  - Handle missing coefficient data gracefully
+  - Provide meaningful error messages for invalid planets
+
+---
+
+#### Part C: Integration & Documentation
+
+**Step C1: Module Organization** ⏳
+- [ ] Review module structure
+  - Consider if `planets.rs` should be separate from `celestial.rs`
+  - Ensure proper module exports in `lib.rs`
+  - Update project structure documentation
+- [ ] Code organization and cleanup
+  - Ensure consistent code style
+  - Add comprehensive doc comments
+  - Remove any placeholder code
+
+**Step C2: Documentation Updates** ⏳
+- [ ] Update readme.md
+  - Add ECEF/ECI conversion examples
+  - Add planet position examples
+  - Update command documentation
+  - Add references to VSOP87 and coordinate systems
+- [ ] Add inline documentation
+  - Document all public functions
+  - Add examples to doc comments
+  - Document coordinate system conventions
+
+**Step C3: Final Testing & Validation** ⏳
+- [ ] Run full test suite
+  - Ensure all existing tests still pass
+  - Run new tests for ECEF/ECI and planets
+  - Check test coverage
+- [ ] Integration testing
+  - Test complete workflows
+  - Test CLI with various combinations
+  - Verify output formatting
+- [ ] Performance validation
+  - Ensure no regressions in existing functionality
+  - Verify new features perform acceptably
+
+**Step C4: Changelog & Version Bump** ⏳
+- [ ] Update version number (0.1 → 0.2)
+- [ ] Document all changes in changelog
+- [ ] Update feature list
+- [ ] Tag release (if using version control)
+
+---
+
+### Testing Strategy
+
+**Unit Tests:**
+- Each function should have comprehensive unit tests
+- Test edge cases, boundary conditions, and error conditions
+- Use known reference values where possible
+- Aim for >90% code coverage
+
+**Integration Tests:**
+- Test complete workflows end-to-end
+- Test CLI commands with various inputs
+- Verify output format and accuracy
+
+**Validation Tests:**
+- Compare results with authoritative sources (JPL Horizons, Meeus algorithms)
+- Test round-trip conversions for accuracy
+- Verify numerical stability
+
+**Performance Tests:**
+- Benchmark critical calculations
+- Ensure no significant performance regressions
+- Profile if performance issues arise
+
+### Logging Strategy
+
+**Log Levels:**
+- **Error**: Calculation failures, invalid inputs
+- **Warn**: Potential accuracy issues, out-of-range inputs
+- **Info**: Major operations (coordinate transformations, planet calculations)
+- **Debug**: Detailed intermediate calculations, matrix values, series evaluations
+
+**Logging Points:**
+- Function entry/exit for major operations
+- Input validation results
+- Intermediate calculation results (debug level)
+- Transformation matrices (debug level)
+- VSOP87 series evaluations (debug level)
+
+### Still To Implement (Future Sessions)
 - More advanced orbital propagation
+- Asteroid and comet positions
+- Stellar positions and proper motion
+- Advanced coordinate system transformations (GCRS, ITRS)
 
 ## Project Structure
 
@@ -184,6 +466,7 @@ cargo run -- orbital --semi-major 6778 --eccentricity 0.0001 --inclination 51.6
 ## Formula Reference
 
 ### Time Systems
+We utilize the full Julian day, vs the reduced. 
 - [Julian Date](https://en.wikipedia.org/wiki/Julian_day) - Continuous day count since 4713 BC
 - [Sidereal Time](https://en.wikipedia.org/wiki/Sidereal_time) - Earth's rotation relative to stars
 
@@ -218,4 +501,72 @@ cargo run -- orbital --semi-major 6778 --eccentricity 0.0001 --inclination 51.6
 - [Kepler's Equation](https://en.wikipedia.org/wiki/Kepler%27s_equation) - Mean to true anomaly
 - [Orbital Elements](https://en.wikipedia.org/wiki/Orbital_elements) - Classical six elements
 - [Orbital State Vectors](https://en.wikipedia.org/wiki/Orbital_state_vectors) - Position and velocity
+
+### ECEF/ECI Transformations (References)
+- [ECEF](https://en.wikipedia.org/wiki/ECEF) - Earth-Centered Earth-Fixed coordinate system
+- [ECI](https://en.wikipedia.org/wiki/Earth-centered_inertial) - Earth-Centered Inertial coordinate system
+- [Sidereal Time](https://en.wikipedia.org/wiki/Sidereal_time) - Used for ECEF/ECI rotation
+
+### Planetary Positions (References)
+- [VSOP87](https://en.wikipedia.org/wiki/VSOP_(planets)) - Variable Speed Orbital Perturbations theory
+- [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/) - Ephemeris data for validation
+- [Planetary Theory](https://en.wikipedia.org/wiki/Planetary_theory) - Mathematical models for planet positions
+
+## Changelog
+
+### Version 0.2 (Session 2 - Planned)
+**Planned Features:**
+- ECEF ↔ ECI coordinate transformations
+- Planet position calculations using VSOP87 theory
+- Extended CLI commands for coordinate and planet calculations
+- Enhanced logging and error handling
+
+**Breaking Changes:**
+- None expected
+
+**Improvements:**
+- Comprehensive test coverage for new features
+- Performance optimizations for VSOP87 calculations
+- Enhanced documentation and examples
+
+---
+
+### Version 0.1 (Sessions 1-4 - Completed)
+**Features:**
+- Julian Date and Sidereal Time calculations
+- Solar and lunar position calculations (RA/Dec)
+- Rise/set times for Sun and Moon
+- Coordinate conversions (RA/Dec ↔ Alt/Az)
+- Kepler's equation solver
+- Orbital period calculations
+- Orbital elements to state vectors
+
+**Phase 1 - Basic Structure:**
+- Project structure with proper Rust organization
+- CLI interface with subcommands
+- Logging and error handling systems
+- Module structure and documentation
+
+**Phase 2 - Core Astronomy Calculations:**
+- Julian Date calculation
+- Greenwich Mean Sidereal Time (GMST)
+- Local Sidereal Time (LST)
+- Solar Position calculations
+- Rise/Set Times calculations
+- Comprehensive testing
+
+**Phase 3 - Coordinate Conversions:**
+- RA/Dec → Alt/Az conversions
+- Alt/Az → RA/Dec conversions
+- CLI Integration
+- Real-time LST usage
+- Comprehensive testing
+
+**Phase 4 - Lunar & Orbital Mechanics:**
+- Lunar Position calculations
+- Lunar Rise/Set times
+- Kepler's Equation solver
+- Orbital Period calculations
+- Elements → State Vectors conversion
+- 29 comprehensive tests
 
