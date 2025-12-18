@@ -126,11 +126,25 @@ fn rotation_matrix_z_impl(angle_rad: f64) -> [[f64; 3]; 3] {
 /// Rotated vector (x', y', z')
 fn apply_rotation_matrix(matrix: [[f64; 3]; 3], vector: (f64, f64, f64)) -> (f64, f64, f64) {
     let (x, y, z) = vector;
-    (
+    
+    // Debug logging: matrix application
+    log::debug!(
+        "Applying rotation matrix to vector: input=({:.3}, {:.3}, {:.3})",
+        x, y, z
+    );
+    
+    let result = (
         matrix[0][0] * x + matrix[0][1] * y + matrix[0][2] * z,
         matrix[1][0] * x + matrix[1][1] * y + matrix[1][2] * z,
         matrix[2][0] * x + matrix[2][1] * y + matrix[2][2] * z,
-    )
+    );
+    
+    log::debug!(
+        "Rotation matrix applied: output=({:.3}, {:.3}, {:.3})",
+        result.0, result.1, result.2
+    );
+    
+    result
 }
 
 /// Converts Earth-Centered Earth-Fixed (ECEF) coordinates to Earth-Centered Inertial (ECI) coordinates.
@@ -179,35 +193,71 @@ fn apply_rotation_matrix(matrix: [[f64; 3]; 3], vector: (f64, f64, f64)) -> (f64
 /// // At GMST=0, ECEF and ECI should be identical
 /// ```
 pub fn ecef_to_eci(ecef: Ecef, gmst: f64) -> Result<Eci> {
-    // Validate inputs
+    // Validate inputs - NaN and infinity checks
     if ecef.x.is_nan() || ecef.y.is_nan() || ecef.z.is_nan() {
         return Err(crate::AstroError::InvalidCoordinate(
-            "ECEF coordinates contain NaN".to_string()
+            "ECEF coordinates contain NaN values. All coordinates must be finite numbers.".to_string()
         ));
     }
     if ecef.x.is_infinite() || ecef.y.is_infinite() || ecef.z.is_infinite() {
         return Err(crate::AstroError::InvalidCoordinate(
-            "ECEF coordinates contain infinity".to_string()
+            "ECEF coordinates contain infinite values. All coordinates must be finite numbers.".to_string()
         ));
     }
     if gmst.is_nan() || gmst.is_infinite() {
         return Err(crate::AstroError::InvalidTime(
-            format!("Invalid GMST: {}", gmst)
+            format!("Invalid GMST value: {}. GMST must be a finite number in hours (0-24).", gmst)
         ));
+    }
+    
+    // Coordinate range validation - reasonable Earth-centered ranges
+    // Earth radius: ~6,378,137 m (WGS84 semi-major axis)
+    // Geosynchronous orbit: ~42,164,000 m
+    // Moon distance: ~384,400,000 m
+    // Warn for very large values (> 1,000,000 km = 1e9 m) which might indicate errors
+    const MAX_REASONABLE_DISTANCE: f64 = 1e9; // 1,000,000 km
+    
+    let distance = (ecef.x * ecef.x + ecef.y * ecef.y + ecef.z * ecef.z).sqrt();
+    
+    if distance > MAX_REASONABLE_DISTANCE {
+        log::warn!(
+            "ECEF coordinate distance ({:.3} m = {:.3} km) exceeds reasonable range (> 1,000,000 km). \
+             This may indicate an input error. Proceeding with transformation.",
+            distance, distance / 1000.0
+        );
+    }
+    
+    // Warn for very small coordinates near origin (might be intentional, but worth noting)
+    if distance < 1000.0 && distance > 0.0 {
+        log::warn!(
+            "ECEF coordinates are very close to origin ({:.3} m). This may be intentional for testing.",
+            distance
+        );
     }
     
     // Normalize GMST to 0-24 range
     let gmst_normalized = gmst.rem_euclid(24.0);
+    if gmst_normalized != gmst {
+        log::debug!(
+            "GMST normalized from {:.6} h to {:.6} h (wrapped to 0-24 range)",
+            gmst, gmst_normalized
+        );
+    }
     
     // Info logging: transformation operation
     log::info!(
-        "ECEF to ECI transformation: input ECEF=({:.3}, {:.3}, {:.3}) m, GMST={:.6} h (normalized: {:.6} h)",
-        ecef.x, ecef.y, ecef.z, gmst, gmst_normalized
+        "ECEF to ECI transformation: input ECEF=({:.3}, {:.3}, {:.3}) m, distance={:.3} m, GMST={:.6} h (normalized: {:.6} h)",
+        ecef.x, ecef.y, ecef.z, distance, gmst, gmst_normalized
     );
     
     // Convert GMST (hours) to rotation angle (radians)
     // Negative rotation: ECEF rotates with Earth, ECI doesn't, so we rotate backwards
     let rotation_angle_rad = -(gmst_normalized * 15.0).to_radians(); // 15° per hour
+    
+    log::debug!(
+        "ECEF to ECI: GMST={:.6} h -> rotation angle={:.6} rad ({:.4}°)",
+        gmst_normalized, rotation_angle_rad, rotation_angle_rad.to_degrees()
+    );
     
     // Construct rotation matrix (debug logging inside function)
     let rotation_matrix = rotation_matrix_z_impl(rotation_angle_rad);
@@ -215,10 +265,21 @@ pub fn ecef_to_eci(ecef: Ecef, gmst: f64) -> Result<Eci> {
     // Apply rotation
     let (x, y, z) = apply_rotation_matrix(rotation_matrix, (ecef.x, ecef.y, ecef.z));
     
+    // Check for potential numerical issues in output
+    let output_distance = (x * x + y * y + z * z).sqrt();
+    let distance_change = (output_distance - distance).abs();
+    if distance_change > 0.001 {
+        log::warn!(
+            "Distance changed during transformation: input={:.3} m, output={:.3} m, change={:.6} m. \
+             This may indicate numerical precision issues.",
+            distance, output_distance, distance_change
+        );
+    }
+    
     // Info logging: transformation result
     log::info!(
-        "ECEF to ECI transformation: output ECI=({:.3}, {:.3}, {:.3}) m",
-        x, y, z
+        "ECEF to ECI transformation: output ECI=({:.3}, {:.3}, {:.3}) m, distance={:.3} m",
+        x, y, z, output_distance
     );
     
     Ok(Eci { x, y, z })
@@ -270,35 +331,71 @@ pub fn ecef_to_eci(ecef: Ecef, gmst: f64) -> Result<Eci> {
 /// // At GMST=0, ECEF and ECI should be identical
 /// ```
 pub fn eci_to_ecef(eci: Eci, gmst: f64) -> Result<Ecef> {
-    // Validate inputs
+    // Validate inputs - NaN and infinity checks
     if eci.x.is_nan() || eci.y.is_nan() || eci.z.is_nan() {
         return Err(crate::AstroError::InvalidCoordinate(
-            "ECI coordinates contain NaN".to_string()
+            "ECI coordinates contain NaN values. All coordinates must be finite numbers.".to_string()
         ));
     }
     if eci.x.is_infinite() || eci.y.is_infinite() || eci.z.is_infinite() {
         return Err(crate::AstroError::InvalidCoordinate(
-            "ECI coordinates contain infinity".to_string()
+            "ECI coordinates contain infinite values. All coordinates must be finite numbers.".to_string()
         ));
     }
     if gmst.is_nan() || gmst.is_infinite() {
         return Err(crate::AstroError::InvalidTime(
-            format!("Invalid GMST: {}", gmst)
+            format!("Invalid GMST value: {}. GMST must be a finite number in hours (0-24).", gmst)
         ));
+    }
+    
+    // Coordinate range validation - reasonable Earth-centered ranges
+    // Earth radius: ~6,378,137 m (WGS84 semi-major axis)
+    // Geosynchronous orbit: ~42,164,000 m
+    // Moon distance: ~384,400,000 m
+    // Warn for very large values (> 1,000,000 km = 1e9 m) which might indicate errors
+    const MAX_REASONABLE_DISTANCE: f64 = 1e9; // 1,000,000 km
+    
+    let distance = (eci.x * eci.x + eci.y * eci.y + eci.z * eci.z).sqrt();
+    
+    if distance > MAX_REASONABLE_DISTANCE {
+        log::warn!(
+            "ECI coordinate distance ({:.3} m = {:.3} km) exceeds reasonable range (> 1,000,000 km). \
+             This may indicate an input error. Proceeding with transformation.",
+            distance, distance / 1000.0
+        );
+    }
+    
+    // Warn for very small coordinates near origin (might be intentional, but worth noting)
+    if distance < 1000.0 && distance > 0.0 {
+        log::warn!(
+            "ECI coordinates are very close to origin ({:.3} m). This may be intentional for testing.",
+            distance
+        );
     }
     
     // Normalize GMST to 0-24 range
     let gmst_normalized = gmst.rem_euclid(24.0);
+    if gmst_normalized != gmst {
+        log::debug!(
+            "GMST normalized from {:.6} h to {:.6} h (wrapped to 0-24 range)",
+            gmst, gmst_normalized
+        );
+    }
     
     // Info logging: transformation operation
     log::info!(
-        "ECI to ECEF transformation: input ECI=({:.3}, {:.3}, {:.3}) m, GMST={:.6} h (normalized: {:.6} h)",
-        eci.x, eci.y, eci.z, gmst, gmst_normalized
+        "ECI to ECEF transformation: input ECI=({:.3}, {:.3}, {:.3}) m, distance={:.3} m, GMST={:.6} h (normalized: {:.6} h)",
+        eci.x, eci.y, eci.z, distance, gmst, gmst_normalized
     );
     
     // Convert GMST (hours) to rotation angle (radians)
     // Positive rotation: ECI is fixed, ECEF rotates with Earth
     let rotation_angle_rad = (gmst_normalized * 15.0).to_radians(); // 15° per hour
+    
+    log::debug!(
+        "ECI to ECEF: GMST={:.6} h -> rotation angle={:.6} rad ({:.4}°)",
+        gmst_normalized, rotation_angle_rad, rotation_angle_rad.to_degrees()
+    );
     
     // Construct rotation matrix (debug logging inside function)
     let rotation_matrix = rotation_matrix_z_impl(rotation_angle_rad);
@@ -306,10 +403,21 @@ pub fn eci_to_ecef(eci: Eci, gmst: f64) -> Result<Ecef> {
     // Apply rotation
     let (x, y, z) = apply_rotation_matrix(rotation_matrix, (eci.x, eci.y, eci.z));
     
+    // Check for potential numerical issues in output
+    let output_distance = (x * x + y * y + z * z).sqrt();
+    let distance_change = (output_distance - distance).abs();
+    if distance_change > 0.001 {
+        log::warn!(
+            "Distance changed during transformation: input={:.3} m, output={:.3} m, change={:.6} m. \
+             This may indicate numerical precision issues.",
+            distance, output_distance, distance_change
+        );
+    }
+    
     // Info logging: transformation result
     log::info!(
-        "ECI to ECEF transformation: output ECEF=({:.3}, {:.3}, {:.3}) m",
-        x, y, z
+        "ECI to ECEF transformation: output ECEF=({:.3}, {:.3}, {:.3}) m, distance={:.3} m",
+        x, y, z, output_distance
     );
     
     Ok(Ecef { x, y, z })

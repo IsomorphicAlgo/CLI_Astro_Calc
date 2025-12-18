@@ -2,7 +2,39 @@
 
 A command-line astronomy and orbital mechanics calculator built in Rust.
 
-## Version 0.1
+## Project Overview
+
+This project is part of a two-component portfolio system designed to showcase skills for the **space industry**. The goal is to demonstrate proficiency in astronomical calculations, orbital mechanics, and space systems engineering through practical, production-ready tools.
+
+### Project Structure
+
+**Part 1: CLI Tool for Astronomical Calculations** ✅ (Nearly Complete)
+- A comprehensive command-line Swiss Army knife for space calculations
+- Features coordinate system conversions, celestial object positions, rise/set times, and orbital mechanics
+- Built with Rust for performance and reliability
+- Fully tested with comprehensive test coverage
+
+**Part 2: Space Weather Web Service** ⏳ (Coming Next)
+- REST API service for fetching, caching, and serving space weather data
+- Data sources: NOAA Space Weather API and similar sources
+- Features: local caching, historical data storage, rate limiting, authentication
+- Deployment: Self-hosted on personal server rack
+
+### Purpose
+
+This project serves as a portfolio demonstration of:
+- **Astronomical Calculations**: Accurate implementation of standard algorithms (Julian Date, sidereal time, coordinate transformations)
+- **Orbital Mechanics**: Kepler's equation, orbital elements, state vector conversions
+- **Software Engineering**: Clean architecture, comprehensive testing, error handling, logging
+- **Space Systems Knowledge**: Understanding of coordinate systems (ECEF/ECI, RA/Dec, Alt/Az), time systems, and celestial mechanics
+
+All calculations are verified against authoritative sources and include comprehensive documentation.
+
+**📖 For detailed mathematical equations and coordinate system explanations, see [OVERVIEW.md](OVERVIEW.md)**
+
+---
+
+## Version 0.1 - CLI Tool Status
 
 **Features:**
 - Julian Date and Sidereal Time calculations
@@ -129,15 +161,44 @@ Session 2 focuses on implementing two major features:
 - ✅ Added example usage to readme
 - ⏳ Test CLI with various inputs (ready for testing)
 
-**Step A5: Logging & Error Handling** ⏳
-- [ ] Add comprehensive logging
-  - Debug: Rotation matrix values, intermediate calculations
-  - Info: Transformation operations, coordinate systems
-  - Warn: Potential numerical issues, large coordinate values
-- [ ] Enhance error handling
-  - Validate input coordinates (reasonable Earth-centered ranges)
-  - Handle edge cases (coordinates at origin, very large values)
-  - Provide meaningful error messages
+**Step A5: Logging & Error Handling** ✅ (Completed)
+- ✅ Add comprehensive logging
+  - ✅ Debug: Rotation matrix values, intermediate calculations (rotation angle, matrix application)
+  - ✅ Info: Transformation operations, coordinate systems, distance calculations
+  - ✅ Warn: Potential numerical issues, large coordinate values, distance changes
+- ✅ Enhance error handling
+  - ✅ Validate input coordinates (reasonable Earth-centered ranges, warn for > 1,000,000 km)
+  - ✅ Handle edge cases (coordinates at origin, very large values with warnings)
+  - ✅ Provide meaningful error messages (descriptive messages for NaN, infinity, and invalid inputs)
+  
+**Implementation Details:**
+- Debug logging added for rotation angle calculations and matrix application steps
+- Warning logs for coordinates exceeding 1,000,000 km (may indicate input errors)
+- Warning logs for coordinates very close to origin (< 1 km, may be intentional for testing)
+- Warning logs for distance changes during transformation (potential numerical precision issues)
+- Enhanced error messages with context and suggestions
+- Distance calculations logged at info level for both input and output coordinates
+
+---
+
+## Part 2: Space Weather Web Service (Coming Next)
+
+### Overview
+A REST API service for fetching, caching, and serving space weather data critical for satellite operations. This service will complement the CLI tool by providing real-time and historical space weather information.
+
+### Planned Features
+- **Data Fetching**: Integration with NOAA Space Weather API and similar sources
+- **Local Caching**: Reduce API calls and improve response times
+- **REST Endpoints**: Clean API for querying current conditions and historical data
+- **Data Storage**: Historical data storage in SQLite or PostgreSQL
+- **Production Features**: Rate limiting and authentication
+- **Deployment**: Self-hosted on personal server rack
+
+### Use Cases
+- Satellite operators monitoring space weather conditions
+- Mission planning based on historical space weather patterns
+- Real-time alerts for solar flares and geomagnetic storms
+- Radiation level monitoring for space missions
 
 ---
 
@@ -323,11 +384,19 @@ Session 2 focuses on implementing two major features:
 - Transformation matrices (debug level)
 - VSOP87 series evaluations (debug level)
 
-### Still To Implement (Future Sessions)
+### Still To Implement (Future Sessions - Part 1)
 - More advanced orbital propagation
 - Asteroid and comet positions
 - Stellar positions and proper motion
 - Advanced coordinate system transformations (GCRS, ITRS)
+- VSOP87 planetary position calculations (Part B of Session 2)
+
+### Part 2: Space Weather Web Service (Planned)
+- REST API development
+- NOAA Space Weather API integration
+- Data caching and storage systems
+- Rate limiting and authentication
+- Server deployment and monitoring
 
 ## Project Structure
 
@@ -528,12 +597,16 @@ We utilize the full Julian day, vs the reduced.
 
 ## Changelog
 
-### Version 0.2 (Session 2 - Planned)
+### Version 0.2 (Session 2 - In Progress)
+**Completed Features:**
+- ✅ ECEF ↔ ECI coordinate transformations (Part A complete)
+- ✅ Extended CLI commands for ECEF/ECI conversions
+- ✅ Enhanced logging and error handling
+- ✅ Comprehensive test coverage for transformations
+
 **Planned Features:**
-- ECEF ↔ ECI coordinate transformations
-- Planet position calculations using VSOP87 theory
-- Extended CLI commands for coordinate and planet calculations
-- Enhanced logging and error handling
+- Planet position calculations using VSOP87 theory (Part B)
+- Extended CLI commands for planet calculations
 
 **Breaking Changes:**
 - None expected
@@ -542,6 +615,16 @@ We utilize the full Julian day, vs the reduced.
 - Comprehensive test coverage for new features
 - Performance optimizations for VSOP87 calculations
 - Enhanced documentation and examples
+
+---
+
+### Version 0.3 (Planned - Part 2: Space Weather Service)
+**Planned Features:**
+- REST API for space weather data
+- NOAA Space Weather API integration
+- Data caching and historical storage
+- Rate limiting and authentication
+- Server deployment documentation
 
 ---
 
