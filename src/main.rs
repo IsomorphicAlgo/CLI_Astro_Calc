@@ -24,6 +24,9 @@ enum Commands {
         to: String,
         #[arg(short, long)]
         coords: String,
+        /// Greenwich Mean Sidereal Time in hours (0-24). If not provided, calculated from current time.
+        #[arg(long)]
+        gmst: Option<f64>,
     },
     RiseSet {
         #[arg(short = 'j', long)]
@@ -62,7 +65,7 @@ fn main() -> Result<()> {
     init_logging(cli.verbose);
     
     match cli.command {
-        Commands::Convert { from, to, coords } => {
+        Commands::Convert { from, to, coords, gmst } => {
             match (from.to_lowercase().as_str(), to.to_lowercase().as_str()) {
                 ("ra-dec" | "radec", "alt-az" | "altaz") => {
                     let result = parse_and_convert_radec_to_altaz(&coords)?;
@@ -77,6 +80,18 @@ fn main() -> Result<()> {
                     let (dec_deg, dec_min, dec_sec, dec_sign) = format_angle(result.dec);
                     println!("RA:  {:02}:{:02}:{:02}", ra_h, ra_m, ra_s);
                     println!("Dec: {}{:02}°{:02}'{:02}\"", dec_sign, dec_deg, dec_min, dec_sec);
+                },
+                ("ecef", "eci") => {
+                    let result = parse_and_convert_ecef_to_eci(&coords, gmst)?;
+                    println!("X: {:.3} m", result.x);
+                    println!("Y: {:.3} m", result.y);
+                    println!("Z: {:.3} m", result.z);
+                },
+                ("eci", "ecef") => {
+                    let result = parse_and_convert_eci_to_ecef(&coords, gmst)?;
+                    println!("X: {:.3} m", result.x);
+                    println!("Y: {:.3} m", result.y);
+                    println!("Z: {:.3} m", result.z);
                 },
                 _ => {
                     return Err(cli_astro_calc::AstroError::InvalidCoordinate(
@@ -230,4 +245,58 @@ fn parse_and_convert_altaz_to_radec(coords: &str) -> Result<cli_astro_calc::coor
     let lst = local_sidereal_time(gmst, lon);
     
     alt_az_to_ra_dec(AltAz { alt, az }, lat, lon, lst)
+}
+
+fn parse_and_convert_ecef_to_eci(coords: &str, gmst_opt: Option<f64>) -> Result<cli_astro_calc::coordinates::Eci> {
+    use cli_astro_calc::coordinates::{Ecef, ecef_to_eci};
+    use cli_astro_calc::time::{julian_date, greenwich_mean_sidereal_time};
+    
+    let parts: Vec<&str> = coords.split(',').collect();
+    if parts.len() != 3 {
+        return Err(cli_astro_calc::AstroError::InvalidCoordinate("Expected: x,y,z (in meters)".to_string()));
+    }
+    
+    let x: f64 = parts[0].trim().parse()
+        .map_err(|_| cli_astro_calc::AstroError::InvalidCoordinate("Invalid x coordinate".to_string()))?;
+    let y: f64 = parts[1].trim().parse()
+        .map_err(|_| cli_astro_calc::AstroError::InvalidCoordinate("Invalid y coordinate".to_string()))?;
+    let z: f64 = parts[2].trim().parse()
+        .map_err(|_| cli_astro_calc::AstroError::InvalidCoordinate("Invalid z coordinate".to_string()))?;
+    
+    let gmst = if let Some(gmst_val) = gmst_opt {
+        gmst_val
+    } else {
+        // Auto-calculate from current time
+        let jd = julian_date(chrono::Utc::now());
+        greenwich_mean_sidereal_time(jd)
+    };
+    
+    ecef_to_eci(Ecef { x, y, z }, gmst)
+}
+
+fn parse_and_convert_eci_to_ecef(coords: &str, gmst_opt: Option<f64>) -> Result<cli_astro_calc::coordinates::Ecef> {
+    use cli_astro_calc::coordinates::{Eci, eci_to_ecef};
+    use cli_astro_calc::time::{julian_date, greenwich_mean_sidereal_time};
+    
+    let parts: Vec<&str> = coords.split(',').collect();
+    if parts.len() != 3 {
+        return Err(cli_astro_calc::AstroError::InvalidCoordinate("Expected: x,y,z (in meters)".to_string()));
+    }
+    
+    let x: f64 = parts[0].trim().parse()
+        .map_err(|_| cli_astro_calc::AstroError::InvalidCoordinate("Invalid x coordinate".to_string()))?;
+    let y: f64 = parts[1].trim().parse()
+        .map_err(|_| cli_astro_calc::AstroError::InvalidCoordinate("Invalid y coordinate".to_string()))?;
+    let z: f64 = parts[2].trim().parse()
+        .map_err(|_| cli_astro_calc::AstroError::InvalidCoordinate("Invalid z coordinate".to_string()))?;
+    
+    let gmst = if let Some(gmst_val) = gmst_opt {
+        gmst_val
+    } else {
+        // Auto-calculate from current time
+        let jd = julian_date(chrono::Utc::now());
+        greenwich_mean_sidereal_time(jd)
+    };
+    
+    eci_to_ecef(Eci { x, y, z }, gmst)
 }

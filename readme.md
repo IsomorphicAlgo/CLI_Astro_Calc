@@ -120,14 +120,14 @@ Session 2 focuses on implementing two major features:
 - Error handling tests for NaN, infinity, and invalid inputs
 - Round-trip tests confirm transformation accuracy
 
-**Step A4: CLI Integration** ⏳
-- [ ] Add `ecef-eci` conversion option to `convert` command
-  - Extend `Commands::Convert` enum
-  - Add coordinate parsing for "x,y,z" format
-  - Add `--gmst` or auto-calculate from current time
-- [ ] Update help text and documentation
-- [ ] Add example usage to readme
-- [ ] Test CLI with various inputs
+**Step A4: CLI Integration** ✅ (Completed)
+- ✅ Add `ecef-eci` conversion option to `convert` command
+  - ✅ Extended `Commands::Convert` enum with `--gmst` option
+  - ✅ Added coordinate parsing for "x,y,z" format
+  - ✅ Added `--gmst` option (optional, auto-calculates from current time if not provided)
+- ✅ Update help text and documentation
+- ✅ Added example usage to readme
+- ⏳ Test CLI with various inputs (ready for testing)
 
 **Step A5: Logging & Error Handling** ⏳
 - [ ] Add comprehensive logging
@@ -426,16 +426,18 @@ cargo run -- time --date "2024-01-01" --time "18:30:45"
 ```
 
 ### 4. `convert` - Coordinate System Conversions
-Convert between equatorial (RA/Dec) and horizontal (Alt/Az) coordinate systems.
+Convert between different coordinate systems: equatorial (RA/Dec), horizontal (Alt/Az), and Earth-centered (ECEF/ECI).
 
 **Parameters:**
-- `--from` or `-f`: Source coordinate system ("ra-dec" or "alt-az")
-- `--to` or `-t`: Target coordinate system ("alt-az" or "ra-dec")
+- `--from` or `-f`: Source coordinate system ("ra-dec", "alt-az", "ecef", or "eci")
+- `--to` or `-t`: Target coordinate system ("alt-az", "ra-dec", "eci", or "ecef")
 - `--coords` or `-c`: Coordinates to convert
+- `--gmst`: (Optional) Greenwich Mean Sidereal Time in hours (0-24). If not provided, calculated from current time. Only used for ECEF/ECI conversions.
 
 **Coordinate Formats:**
 - RA/Dec: "hours,degrees" (e.g., "12.5,45.0")
 - Alt/Az: "altitude,azimuth" in degrees (e.g., "45.0,180.0")
+- ECEF/ECI: "x,y,z" in meters (e.g., "6378137.0,0.0,0.0")
 
 **Examples:**
 ```bash
@@ -444,9 +446,21 @@ cargo run -- convert --from ra-dec --to alt-az --coords "12.5,45.0"
 
 # Convert Alt/Az to RA/Dec
 cargo run -- convert --from alt-az --to ra-dec --coords "45.0,180.0"
+
+# Convert ECEF to ECI (auto-calculates GMST from current time)
+cargo run -- convert --from ecef --to eci --coords "6378137.0,0.0,0.0"
+
+# Convert ECEF to ECI with specified GMST
+cargo run -- convert --from ecef --to eci --coords "6378137.0,0.0,0.0" --gmst 12.5
+
+# Convert ECI to ECEF (auto-calculates GMST from current time)
+cargo run -- convert --from eci --to ecef --coords "6378137.0,0.0,0.0"
 ```
 
-**Note:** Outputs vary based on current time and observer location (hardcoded as 47.9088°N, 122.2503°W).
+**Note:** 
+- RA/Dec ↔ Alt/Az conversions vary based on current time and observer location (hardcoded as 47.9088°N, 122.2503°W).
+- ECEF/ECI conversions require GMST (Greenwich Mean Sidereal Time). If `--gmst` is not provided, it is automatically calculated from the current time.
+- ECEF/ECI coordinates are in meters. Typical values range from Earth's surface (~6,378,137 m) to geosynchronous orbit (~42,164,000 m).
 
 ### 5. `orbital` - Orbital Mechanics (Basic)
 Display orbital elements (full state vector conversion coming soon).
