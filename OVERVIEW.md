@@ -921,6 +921,150 @@ The `rise-set` command supports planets, but planet rise/set calculations are no
 
 ---
 
+## Error Handling and Logging Patterns
+
+### Logging Strategy
+
+The VSOP87 implementation uses a multi-level logging system to provide visibility into calculations while maintaining performance:
+
+**Debug Level** (`--verbose` flag):
+- VSOP87 series evaluation details (term counts, intermediate values)
+- Obliquity calculations
+- Coordinate conversion steps (ecliptic → equatorial, heliocentric → geocentric)
+- Rectangular coordinate values at each step
+
+**Info Level** (default):
+- Planet calculation start/completion
+- Time in Julian centuries from J2000.0
+- Heliocentric ecliptic coordinates (L, B, R)
+- Earth's heliocentric position
+- Final geocentric RA/Dec coordinates
+
+**Warn Level**:
+- Extreme dates (>±20 centuries from J2000.0)
+- Out-of-range Julian Dates
+- Potential accuracy issues
+- Placeholder data detection
+- Unusual coordinate values
+
+**Error Level**:
+- Invalid input validation failures
+- Calculation errors
+- Missing data errors
+
+### Error Handling Patterns
+
+#### Input Validation
+
+**Julian Date Validation**:
+```rust
+// Check for NaN and infinity
+if julian_date.is_nan() {
+    return Err("Julian Date cannot be NaN");
+}
+if julian_date.is_infinite() {
+    return Err("Julian Date cannot be infinite");
+}
+
+// Check reasonable range
+if julian_date < MIN_JD || julian_date > MAX_JD {
+    warn!("Julian Date outside recommended range");
+}
+```
+
+**Time Argument Validation**:
+- Valid range: ~2000 BC to 3000 AD (JD ~1,000,000 to ~3,000,000)
+- VSOP87 optimal range: ±20 centuries from J2000.0
+- Warnings issued for extreme dates, but calculation proceeds
+
+#### Data Availability Checks
+
+**VSOP87 Coefficient Data**:
+```rust
+let vsop87_data = get_planet_vsop87_data(planet)
+    .ok_or_else(|| {
+        error!("VSOP87 data not available for {}", planet.name());
+        AstroError::InvalidCoordinate(
+            format!("VSOP87 data not available for {}. This planet may not be fully implemented yet.", planet.name())
+        )
+    })?;
+```
+
+**Placeholder Data Detection**:
+- Checks if Earth's VSOP87 data is placeholder (empty series)
+- Warns user but allows calculation to proceed
+- Helps identify when full VSOP87 data needs to be added
+
+#### Calculation Result Validation
+
+**Coordinate Range Validation**:
+- Longitude: Normalized to [0, 2π) radians
+- Latitude: Validated to [-π/2, π/2] radians (warns if outside)
+- Radius: Must be positive (error if ≤ 0)
+- RA: Validated to [0, 24) hours
+- Dec: Validated to [-90°, +90°] degrees
+
+**NaN Detection**:
+- Checks for NaN values in all calculated coordinates
+- Returns error with descriptive message
+- Helps identify calculation issues early
+
+#### Error Recovery Approaches
+
+**Graceful Degradation**:
+- Extreme dates: Warn but continue calculation
+- Placeholder data: Warn but attempt calculation
+- Out-of-range coordinates: Warn but return result
+
+**Fail-Fast for Critical Errors**:
+- Invalid Julian Date (NaN/infinity): Return error immediately
+- Missing required data (Earth position): Return error immediately
+- Negative radius: Return error immediately
+
+**Error Messages**:
+- Descriptive: Explain what went wrong
+- Actionable: Suggest how to fix the issue
+- Contextual: Include relevant values (planet name, Julian Date, etc.)
+
+### Example Error Scenarios
+
+**Scenario 1: Missing Planet Data**
+```
+Error: VSOP87 data not available for Jupiter. This planet may not be fully implemented yet.
+```
+**Recovery**: Ensure planet's VSOP87 coefficients are added to `get_jupiter_vsop87_data()`
+
+**Scenario 2: Missing Earth Data**
+```
+Error: Earth VSOP87 data not available for geocentric conversion. 
+Earth's position is required to convert from heliocentric to geocentric coordinates.
+```
+**Recovery**: Implement Earth's VSOP87 coefficients
+
+**Scenario 3: Extreme Date**
+```
+Warning: Julian Date 3000000.0 is 15.04 centuries from J2000.0. 
+VSOP87 accuracy may degrade for extreme dates (>±20 centuries).
+```
+**Recovery**: Calculation proceeds, but user is warned about potential accuracy issues
+
+**Scenario 4: Invalid Input**
+```
+Error: Julian Date cannot be NaN (Not a Number). Please provide a valid date.
+```
+**Recovery**: User must provide a valid Julian Date
+
+### Best Practices
+
+1. **Validate Early**: Check inputs at function entry
+2. **Log Context**: Include relevant values in log messages
+3. **Warn for Degradation**: Alert users to potential accuracy issues
+4. **Fail Fast for Critical Errors**: Don't proceed with invalid data
+5. **Provide Actionable Errors**: Tell users how to fix the problem
+6. **Use Appropriate Log Levels**: Debug for details, Info for operations, Warn for issues, Error for failures
+
+---
+
 ## References
 
 This program implements algorithms based on:

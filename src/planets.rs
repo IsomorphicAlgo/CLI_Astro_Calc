@@ -156,13 +156,29 @@ pub struct HeliocentricEcliptic {
 /// println!("Jupiter: RA={:.2}h, Dec={:.2}°", position.ra, position.dec);
 /// ```
 pub fn calculate_planet_position(planet: Planet, julian_date: f64) -> Result<RaDec> {
-    use log::{info, warn};
+    use log::{info, warn, error};
     
-    // Validate Julian Date
-    if julian_date.is_nan() || julian_date.is_infinite() {
+    // Validate Julian Date - check for NaN and infinity
+    if julian_date.is_nan() {
+        error!("Invalid Julian Date: NaN (Not a Number)");
         return Err(crate::error::AstroError::InvalidTime(
-            format!("Invalid Julian Date: {}", julian_date)
+            "Julian Date cannot be NaN (Not a Number). Please provide a valid date.".to_string()
         ));
+    }
+    if julian_date.is_infinite() {
+        error!("Invalid Julian Date: {} (infinity)", julian_date);
+        return Err(crate::error::AstroError::InvalidTime(
+            format!("Julian Date cannot be infinite (got {}). Please provide a valid date.", julian_date)
+        ));
+    }
+    
+    // Validate reasonable Julian Date range
+    // Valid range: approximately 2000 BC to 3000 AD (JD ~1721424 to ~2817152)
+    const MIN_JD: f64 = 1000000.0; // ~-2000 BC
+    const MAX_JD: f64 = 3000000.0; // ~3000 AD
+    if julian_date < MIN_JD || julian_date > MAX_JD {
+        warn!("Julian Date {} is outside recommended range [{:.0}, {:.0}]. Results may be inaccurate.",
+              julian_date, MIN_JD, MAX_JD);
     }
     
     // Warn for extreme dates (outside reasonable range for VSOP87)
@@ -170,15 +186,18 @@ pub fn calculate_planet_position(planet: Planet, julian_date: f64) -> Result<RaD
     const REASONABLE_RANGE_CENTURIES: f64 = 20.0; // ±20 centuries from J2000
     let centuries_from_j2000 = (julian_date - J2000) / 36525.0;
     if centuries_from_j2000.abs() > REASONABLE_RANGE_CENTURIES {
-        warn!("Julian Date {} is {} centuries from J2000.0. VSOP87 accuracy may degrade for extreme dates.",
+        warn!("Julian Date {} is {:.2} centuries from J2000.0. VSOP87 accuracy may degrade for extreme dates (>±20 centuries).",
               julian_date, centuries_from_j2000);
     }
     
     // Get VSOP87 data for planet
     let vsop87_data = get_planet_vsop87_data(planet)
-        .ok_or_else(|| crate::error::AstroError::InvalidCoordinate(
-            format!("VSOP87 data not available for {}", planet.name())
-        ))?;
+        .ok_or_else(|| {
+            error!("VSOP87 data not available for {}", planet.name());
+            crate::error::AstroError::InvalidCoordinate(
+                format!("VSOP87 data not available for {}. This planet may not be fully implemented yet.", planet.name())
+            )
+        })?;
     
     info!("Calculating {} position at JD {:.6}", planet.name(), julian_date);
     
@@ -196,19 +215,56 @@ pub fn calculate_planet_position(planet: Planet, julian_date: f64) -> Result<RaD
     // Calculate Earth's heliocentric position for geocentric conversion
     // Note: Earth's VSOP87 data may be a placeholder - handle gracefully
     let earth_vsop87_data = get_planet_vsop87_data(Planet::Earth)
-        .ok_or_else(|| crate::error::AstroError::CalculationError(
-            "Earth VSOP87 data not available for geocentric conversion".to_string()
-        ))?;
+        .ok_or_else(|| {
+            use log::error;
+            error!("Earth VSOP87 data not available - required for geocentric conversion");
+            crate::error::AstroError::CalculationError(
+                "Earth VSOP87 data not available for geocentric conversion. Earth's position is required to convert from heliocentric to geocentric coordinates. Please ensure Earth's VSOP87 coefficients are implemented.".to_string()
+            )
+        })?;
     
-    let earth_heliocentric = calculate_heliocentric_ecliptic(&earth_vsop87_data, t)?;
+    // Check if Earth data appears to be placeholder (empty series)
+    let earth_data_is_placeholder = earth_vsop87_data.longitude.series_0.is_empty() &&
+                                     earth_vsop87_data.latitude.series_0.is_empty() &&
+                                     earth_vsop87_data.radius.series_0.is_empty();
+    
+    if earth_data_is_placeholder {
+        warn!("Earth VSOP87 data appears to be placeholder (empty series). Geocentric conversion may produce incorrect results.");
+    }
+    
+    let earth_heliocentric = calculate_heliocentric_ecliptic(&earth_vsop87_data, t)
+        .map_err(|e| {
+            use log::error;
+            error!("Failed to calculate Earth's heliocentric position: {}", e);
+            crate::error::AstroError::CalculationError(
+                format!("Failed to calculate Earth's position for geocentric conversion: {}. This may indicate invalid VSOP87 data.", e)
+            )
+        })?;
     info!("Earth heliocentric ecliptic: L={:.10} rad ({:.6}°), B={:.10} rad ({:.6}°), R={:.10} AU",
           earth_heliocentric.longitude, earth_heliocentric.longitude.to_degrees(),
           earth_heliocentric.latitude, earth_heliocentric.latitude.to_degrees(),
           earth_heliocentric.radius);
     
     // Convert heliocentric ecliptic to geocentric equatorial (RA/Dec)
-    let ra_dec = heliocentric_to_geocentric(heliocentric, earth_heliocentric, julian_date)?;
-    info!("Geocentric equatorial: RA={:.6}h, Dec={:.6}°", ra_dec.ra, ra_dec.dec);
+    let ra_dec = heliocentric_to_geocentric(heliocentric, earth_heliocentric, julian_date)
+        .map_err(|e| {
+            use log::error;
+            error!("Coordinate conversion failed for {}: {}", planet.name(), e);
+            crate::error::AstroError::CalculationError(
+                format!("Failed to convert {} coordinates from heliocentric to geocentric: {}", planet.name(), e)
+            )
+        })?;
+    
+    info!("{} position calculated: RA={:.6}h, Dec={:.6}°", planet.name(), ra_dec.ra, ra_dec.dec);
+    
+    // Warn if coordinates seem unusual (potential data issues)
+    if ra_dec.ra.is_nan() || ra_dec.dec.is_nan() {
+        warn!("Calculated RA/Dec contains NaN values. This may indicate invalid VSOP87 data or calculation error.");
+    }
+    if ra_dec.dec.abs() > 90.0 {
+        warn!("Calculated declination ({:.6}°) is outside valid range [-90°, +90°]. This may indicate a calculation error.",
+              ra_dec.dec);
+    }
     
     Ok(ra_dec)
 }
@@ -228,7 +284,7 @@ fn calculate_heliocentric_ecliptic(
     vsop87_data: &PlanetVsop87Data,
     t: f64,
 ) -> Result<HeliocentricEcliptic> {
-    use log::info;
+    use log::{info, warn};
     
     // Calculate L (longitude)
     let l = calculate_longitude(&vsop87_data.longitude, t);
@@ -241,6 +297,26 @@ fn calculate_heliocentric_ecliptic(
     // Calculate R (radius)
     let r = calculate_radius(&vsop87_data.radius, t);
     info!("VSOP87 radius (R): {:.10} AU", r);
+    
+    // Validate calculated values
+    if l.is_nan() || b.is_nan() || r.is_nan() {
+        warn!("VSOP87 calculation produced NaN values. This may indicate invalid coefficients or time argument.");
+        return Err(crate::error::AstroError::CalculationError(
+            "VSOP87 calculation produced NaN (Not a Number) values. Check VSOP87 coefficients and time argument.".to_string()
+        ));
+    }
+    
+    if r <= 0.0 {
+        warn!("VSOP87 radius is non-positive ({} AU). This is physically impossible.", r);
+        return Err(crate::error::AstroError::CalculationError(
+            format!("VSOP87 radius must be positive, got {} AU. This may indicate invalid coefficients.", r)
+        ));
+    }
+    
+    if b.abs() > std::f64::consts::PI / 2.0 {
+        warn!("VSOP87 latitude ({:.6}°) is outside valid range [-90°, +90°].", b.to_degrees());
+        // Don't fail, but warn - this could be a calculation issue
+    }
     
     // Normalize longitude to [0, 2π)
     let l_normalized = l.rem_euclid(2.0 * std::f64::consts::PI);
