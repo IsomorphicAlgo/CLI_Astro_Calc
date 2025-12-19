@@ -8,11 +8,11 @@ This project is part of a two-component portfolio system designed to showcase sk
 
 ### Project Structure
 
-**Part 1: CLI Tool for Astronomical Calculations** ✅ (Nearly Complete)
+**Part 1: CLI Tool for Astronomical Calculations** ✅ (Version 0.2 Complete)
 - A comprehensive command-line Swiss Army knife for space calculations
-- Features coordinate system conversions, celestial object positions, rise/set times, and orbital mechanics
+- Features coordinate system conversions (RA/Dec ↔ Alt/Az, ECEF ↔ ECI), celestial object positions (Sun, Moon, Planets via VSOP87), rise/set times, and orbital mechanics
 - Built with Rust for performance and reliability
-- Fully tested with comprehensive test coverage
+- Fully tested with comprehensive test coverage (71 unit tests + 5 doctests)
 
 **Part 2: Space Weather Web Service** ⏳ (Coming Next)
 - REST API service for fetching, caching, and serving space weather data
@@ -54,13 +54,15 @@ All calculations are verified against authoritative sources and include comprehe
 
 ---
 
-## Version 0.1 - CLI Tool Status
+## Version 0.2 - CLI Tool Status
 
 **Features:**
 - Julian Date and Sidereal Time calculations
 - Solar and lunar position calculations (RA/Dec)
 - Rise/set times for Sun and Moon
 - Coordinate conversions (RA/Dec ↔ Alt/Az)
+- **ECEF ↔ ECI coordinate transformations** (NEW in v0.2)
+- **VSOP87 planetary position calculations** (NEW in v0.2)
 - Kepler's equation solver
 - Orbital period calculations
 - Orbital elements to state vectors
@@ -477,11 +479,18 @@ Session 2 focuses on implementing two major features:
 - Confirmed ECEF/ECI transformations work correctly at various GMST values
 - Validated coordinate conversion accuracy and output formatting
 
-**Step C4: Changelog & Version Bump** ⏳
-- [ ] Update version number (0.1 → 0.2)
-- [ ] Document all changes in changelog
-- [ ] Update feature list
-- [ ] Tag release (if using version control)
+**Step C4: Changelog & Version Bump** ✅ (Completed)
+- ✅ Update version number (0.1 → 0.2)
+  - Updated Cargo.toml version from 0.1.0 to 0.2.0
+- ✅ Document all changes in changelog
+  - Complete changelog entry for Version 0.2 with all Session 2 features
+  - Documented Part A (ECEF/ECI), Part B (VSOP87), and Part C (Integration)
+  - Added test coverage summary and known limitations
+- ✅ Update feature list
+  - Updated main feature list to include ECEF/ECI and VSOP87 planetary positions
+  - Marked new features with "(NEW in v0.2)" notation
+- ⏳ Tag release (if using version control)
+  - Ready for git tag when user is ready to tag the release
 
 ---
 
@@ -856,57 +865,70 @@ We utilize the full Julian day, vs the reduced.
 
 ## Changelog
 
-### Version 0.2 (Session 2 - In Progress)
-**Completed Features:**
-- ✅ ECEF ↔ ECI coordinate transformations (Part A complete)
-- ✅ Extended CLI commands for ECEF/ECI conversions
-- ✅ Enhanced logging and error handling
-- ✅ Comprehensive test coverage for transformations
-- ✅ VSOP87 series evaluation implementation (Step B3 complete)
-  - VSOP87 series evaluator with trigonometric term evaluation
-  - Heliocentric ecliptic coordinate calculation (L, B, R)
-  - Time calculation in Julian centuries from J2000.0
-  - Comprehensive logging and input validation
-- ✅ Coordinate conversion pipeline (Step B4 complete)
+### Version 0.2 (Session 2 - Complete) ✅
+**Release Date**: December 2024
+
+**Major Features Added:**
+
+**Part A: ECEF ↔ ECI Coordinate Transformations** ✅
+- ✅ Complete implementation of Earth-Centered Earth-Fixed (ECEF) to Earth-Centered Inertial (ECI) transformations
+- ✅ Rotation matrix-based transformations using Greenwich Mean Sidereal Time (GMST)
+- ✅ Support for both directions: ECEF → ECI and ECI → ECEF
+- ✅ Comprehensive input validation and error handling
+- ✅ Extended CLI `convert` command with `--gmst` option for ECEF/ECI conversions
+- ✅ 15 comprehensive test cases covering edge cases, round-trip accuracy, and numerical stability
+- ✅ Enhanced logging at multiple levels (Debug, Info, Warn, Error)
+- ✅ Documentation of coordinate system conventions (J2000.0 epoch)
+
+**Part B: VSOP87 Planetary Position Calculations** ✅
+- ✅ VSOP87 series evaluation implementation with trigonometric term evaluation
+- ✅ Heliocentric ecliptic coordinate calculation (longitude L, latitude B, radius R)
+- ✅ Complete coordinate conversion pipeline:
   - Ecliptic to equatorial conversion using obliquity of the ecliptic
   - Heliocentric to geocentric conversion (vector subtraction)
   - Rectangular to RA/Dec conversion
-  - Complete planet position calculation (VSOP87 → RA/Dec)
-  - 6 new tests for coordinate conversion functions
-- ✅ Comprehensive testing and validation (Step B5 complete)
-  - 26 tests covering VSOP87 evaluation, coordinate conversion, planet coordinates, integration, and performance
-  - Performance benchmarks: < 1ms per planet calculation
-  - Validation methodology documented in OVERVIEW.md
-- ✅ CLI integration for planets (Step B6 complete)
-  - Extended `position` command to support all planets
-  - Extended `rise-set` command to support planets (error until planet rise/set implemented)
-  - Unified object parsing with case-insensitive planet names
-  - Comprehensive error messages and documentation
-  - CLI usage examples added to OVERVIEW.md
-- ✅ Enhanced logging and error handling (Step B7 complete)
-  - Multi-level logging system (Debug, Info, Warn, Error)
-  - Comprehensive input validation (Julian Date range, NaN/infinity checks)
-  - Result validation (coordinate ranges, NaN detection)
-  - Placeholder data detection and warnings
-  - Contextual error messages with actionable suggestions
-  - Error handling patterns documented in OVERVIEW.md
+- ✅ Planet position calculation for all 8 planets (Mercury has full data, others have placeholder structure)
+- ✅ Extended `position` command to support all planets
+- ✅ Unified object parsing with case-insensitive planet names
+- ✅ 26 comprehensive tests covering VSOP87 evaluation, coordinate conversion, integration, and performance
+- ✅ Performance benchmarks: < 1ms per planet calculation (target: < 10ms)
 
-**Part B: Planet Positions (VSOP87) - Complete!** ✅
-All steps (B1-B7) have been completed. The VSOP87 planetary position calculation system is fully implemented with:
-- VSOP87 series evaluation
-- Coordinate conversion pipeline
-- Comprehensive testing (26 tests)
-- CLI integration
-- Enhanced logging and error handling
+**Part C: Integration & Documentation** ✅
+- ✅ Module organization review and cleanup
+- ✅ Enhanced documentation with inline examples
+- ✅ Complete test suite validation (71 unit tests + 5 doctests)
+- ✅ Integration testing of all CLI commands
+- ✅ Performance validation (no regressions, new features meet targets)
+- ✅ Educational summaries added to OVERVIEW.md for:
+  - ECEF/ECI transformation mathematics
+  - VSOP87 theory and data structures
+  - Coordinate conversion pipeline
+  - Validation methodology
+  - Error handling patterns
+
+**Test Coverage:**
+- 71 unit tests (all passing)
+- 5 doctests (all passing)
+- Comprehensive coverage for ECEF/ECI transformations (15 tests)
+- Comprehensive coverage for VSOP87 and planet positions (26 tests)
+- Performance tests for planet calculations and VSOP87 series evaluation
 
 **Breaking Changes:**
-- None expected
+- None
 
 **Improvements:**
-- Comprehensive test coverage for new features (20 tests for VSOP87)
-- Performance optimizations for VSOP87 calculations (pre-computed time powers)
-- Enhanced documentation with VSOP87 evaluation algorithms and validation methodology
-- Educational summaries added to OVERVIEW.md for VSOP87 theory and testing
+- Enhanced error handling with contextual messages
+- Multi-level logging system (Debug, Info, Warn, Error)
+- Comprehensive input validation (NaN, infinity, range checks)
+- Performance optimizations (pre-computed time powers for VSOP87)
+- Enhanced documentation with examples and educational content
+- Fixed doctest compilation issues
+
+**Known Limitations:**
+- Earth's VSOP87 data is placeholder (required for geocentric planet calculations)
+- Most planets have placeholder VSOP87 data (only Mercury has full truncated coefficients)
+- Planet rise/set times not yet implemented (returns error message)
+- High-precision precession/nutation corrections not implemented (IAU-76/FK5 models documented for future)
 
 ---
 

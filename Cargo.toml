@@ -1,6 +1,6 @@
 [package]
 name = "cli-astro-calc"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["MichaelHansen"]
 description = "A command-line astronomy and orbital mechanics calculator"

@@ -1065,6 +1065,95 @@ Error: Julian Date cannot be NaN (Not a Number). Please provide a valid date.
 
 ---
 
+## Testing and Validation Methodology
+
+### Test Coverage Strategy
+
+The CLI Astro Calc project uses a comprehensive multi-level testing approach to ensure accuracy and reliability:
+
+**Unit Tests** (71 tests):
+- Individual function testing with known reference values
+- Edge case validation (poles, equator, origin, large coordinates)
+- Input validation (NaN, infinity, range checks)
+- Round-trip accuracy tests (verify transformations are reversible)
+- Performance benchmarks (ensure calculations meet speed targets)
+
+**Integration Tests**:
+- End-to-end workflow testing (CLI commands with various inputs)
+- Coordinate system conversion pipelines
+- Multiple planet calculations at same/different epochs
+- Cross-module functionality (time → coordinates → celestial objects)
+
+**Validation Tests**:
+- Comparison with authoritative sources (JPL Horizons, Meeus algorithms)
+- Known coordinate pair verification (Greenwich meridian, poles, equator)
+- Numerical stability testing (large coordinates, extreme dates)
+- Accuracy verification (within acceptable tolerances)
+
+**Doctests** (5 tests):
+- Code examples in documentation are verified to compile and run
+- Ensures documentation stays synchronized with implementation
+
+### Accuracy Validation
+
+**ECEF/ECI Transformations**:
+- Round-trip accuracy: < 1mm for Earth-scale coordinates (~6,378 km)
+- Verified at multiple GMST values (0, 6, 12, 18, 23.5 hours)
+- Tested with known coordinate pairs (Greenwich meridian, poles, equator)
+- Numerical stability verified for geosynchronous orbit distances (~42,164 km)
+
+**VSOP87 Planetary Positions**:
+- Mercury position verified at J2000.0 epoch (reference: JPL Horizons)
+- Coordinate range validation (longitude 0-2π, latitude ±π/2, radius > 0)
+- Time calculation accuracy (Julian centuries from J2000.0)
+- Performance targets: < 1ms per planet calculation (actual: < 1ms achieved)
+
+**Coordinate Conversions**:
+- RA/Dec ↔ Alt/Az round-trip accuracy verified
+- Edge cases tested (zenith, horizon, poles, equator)
+- Coordinate normalization validated
+
+### Performance Benchmarks
+
+**Target vs Actual Performance**:
+- Planet calculations: Target < 10ms, Actual < 1ms ✅
+- VSOP87 series evaluation: Target < 100μs, Actual < 100μs ✅
+- ECEF/ECI transformations: < 1μs per transformation ✅
+- Coordinate conversions: < 1μs per conversion ✅
+
+**Optimization Techniques**:
+- Pre-computed time powers for VSOP87 (avoid repeated calculations)
+- Efficient rotation matrix operations (direct matrix multiplication)
+- Compile-time constant storage for VSOP87 coefficients (no runtime loading)
+
+### Test Execution
+
+**Running Tests**:
+```bash
+# Run all tests
+cargo test
+
+# Run only unit tests
+cargo test --lib
+
+# Run only doctests
+cargo test --doc
+
+# Run with verbose output
+cargo test -- --nocapture
+
+# Run performance tests
+cargo test --release test_performance
+```
+
+**Test Organization**:
+- Tests are co-located with source code (in `#[cfg(test)]` modules)
+- Each module has its own test module (`mod tests { ... }`)
+- Integration tests verify complete workflows
+- Performance tests ensure no regressions
+
+---
+
 ## References
 
 This program implements algorithms based on:
