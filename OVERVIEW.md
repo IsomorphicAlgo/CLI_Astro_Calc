@@ -5,11 +5,12 @@
 **CLI Astro Calc** is a command-line astronomy and orbital mechanics calculator built in Rust. The program provides accurate astronomical calculations for both educational and practical applications, including:
 
 - **Time Systems**: Converting between calendar dates and astronomical time systems (Julian Date, Sidereal Time)
-- **Celestial Object Positions**: Calculating the positions of the Sun and Moon in the sky
+- **Celestial Object Positions**: Calculating the positions of the Sun, Moon, and planets in the sky
 - **Rise/Set Times**: Determining when celestial objects rise and set for any location on Earth
 - **Coordinate Transformations**: Converting between different astronomical coordinate systems
 - **Orbital Mechanics**: Solving Kepler's equation and converting between orbital elements and state vectors
 - **Earth-Centered Coordinates**: Transforming between Earth-Centered Earth-Fixed (ECEF) and Earth-Centered Inertial (ECI) coordinate systems
+- **Planetary Ephemeris**: VSOP87-based planetary position calculations (heliocentric coordinates)
 
 The program is designed for accuracy, with all calculations verified against authoritative astronomical sources and comprehensive test coverage.
 
@@ -22,9 +23,10 @@ The program is designed for accuracy, with all calculations verified against aut
 - **Greenwich Mean Sidereal Time (GMST)**: Calculates Earth's rotation relative to the stars
 - **Local Sidereal Time (LST)**: Converts GMST to local sidereal time for any longitude
 
-### 2. Celestial Object Positions (`celestial.rs`)
+### 2. Celestial Object Positions (`celestial.rs`, `planets.rs`)
 - **Solar Position**: Calculates Sun's Right Ascension (RA) and Declination (Dec) using mean anomaly and equation of center
 - **Lunar Position**: Calculates Moon's RA/Dec using perturbation theory with multiple periodic terms
+- **Planetary Positions**: Calculates planet positions using VSOP87 theory (heliocentric ecliptic coordinates L, B, R)
 - **Rise/Set Times**: Determines when Sun or Moon rises/sets for any observer location
 
 ### 3. Coordinate Conversions (`coordinates.rs`)
@@ -425,23 +427,120 @@ VSOP87 offers several versions for different applications:
 
 ### Coordinate Conversion Pipeline
 
-1. **Heliocentric Ecliptic (L, B, R)**: Raw VSOP87 output
-   - L: Ecliptic longitude (radians)
-   - B: Ecliptic latitude (radians)
-   - R: Radius vector (Astronomical Units)
+The VSOP87 coordinate conversion pipeline transforms heliocentric ecliptic coordinates (L, B, R) to geocentric equatorial coordinates (RA, Dec) suitable for observations from Earth.
 
-2. **Heliocentric Equatorial**: Convert ecliptic to equatorial
-   - Apply rotation using obliquity of the ecliptic
-   - Time-dependent obliquity: `ε = 23.439291° - 0.0130042° × t - ...`
+#### Step 1: Heliocentric Ecliptic (L, B, R) - Raw VSOP87 Output
+- **L**: Ecliptic longitude (radians) - position along the ecliptic plane
+- **B**: Ecliptic latitude (radians) - position above/below the ecliptic plane
+- **R**: Radius vector (Astronomical Units) - distance from Sun to planet
 
-3. **Geocentric Equatorial**: Account for Earth's position
-   - Calculate Earth's heliocentric position using VSOP87
-   - Subtract Earth's position vector from planet's position
-   - Optional: Apply light-time correction for high precision
+#### Step 2: Obliquity of the Ecliptic Calculation
 
-4. **Final Output (RA, Dec)**: Geocentric equatorial coordinates
-   - Right Ascension (hours)
-   - Declination (degrees)
+The obliquity of the ecliptic (ε) is the angle between Earth's equatorial plane and the ecliptic plane (Earth's orbital plane around the Sun). It changes slowly over time due to precession.
+
+**Formula**:
+```
+ε = 23.4393° - 0.0000004° × d
+```
+Where `d` = days since J2000.0
+
+**Higher Precision Formula** (for arcsecond accuracy):
+```
+ε = 23.439291° - 0.0130042° × t - 0.00000016° × t² + 0.000000503° × t³
+```
+Where `t` = Julian centuries from J2000.0
+
+**Current Value**: ~23.44° (decreasing by ~0.47 arcseconds per century)
+
+#### Step 3: Ecliptic to Equatorial Conversion
+
+Convert from ecliptic spherical coordinates (L, B, R) to equatorial rectangular coordinates (x, y, z).
+
+**Ecliptic Rectangular Coordinates**:
+```
+x_ecl = R × cos(B) × cos(L)
+y_ecl = R × cos(B) × sin(L)
+z_ecl = R × sin(B)
+```
+
+**Rotation to Equatorial** (rotate around X-axis by obliquity angle ε):
+```
+x_eq = x_ecl
+y_eq = y_ecl × cos(ε) - z_ecl × sin(ε)
+z_eq = y_ecl × sin(ε) + z_ecl × cos(ε)
+```
+
+This rotation accounts for the ~23.44° tilt between the ecliptic and equatorial planes.
+
+#### Step 4: Heliocentric to Geocentric Conversion
+
+Convert from heliocentric (Sun-centered) to geocentric (Earth-centered) coordinates by subtracting Earth's position.
+
+**Geocentric Position Vector**:
+```
+[x_geo]   [x_planet]   [x_earth]
+[y_geo] = [y_planet] - [y_earth]
+[z_geo]   [z_planet]   [z_earth]
+```
+
+Where:
+- `(x_planet, y_planet, z_planet)`: Planet's heliocentric equatorial position
+- `(x_earth, y_earth, z_earth)`: Earth's heliocentric equatorial position (calculated using VSOP87)
+- `(x_geo, y_geo, z_geo)`: Geocentric equatorial position
+
+**Note**: Both planet and Earth positions must be in the same coordinate system (equatorial) before subtraction.
+
+#### Step 5: Rectangular to RA/Dec Conversion
+
+Convert geocentric equatorial rectangular coordinates to Right Ascension and Declination.
+
+**Right Ascension (RA)**:
+```
+RA = atan2(y, x) (in radians)
+RA_hours = (RA_degrees / 15.0) mod 24
+```
+
+**Declination (Dec)**:
+```
+r = √(x² + y² + z²)
+Dec = arcsin(z / r) (in radians)
+Dec_degrees = Dec_radians × (180/π)
+```
+
+Where:
+- `r`: Distance from Earth to planet
+- `RA`: 0-24 hours (measured eastward from vernal equinox)
+- `Dec`: -90° to +90° (measured from celestial equator)
+
+#### Complete Pipeline Summary
+
+```
+VSOP87 Output (L, B, R)
+    ↓
+Calculate Obliquity ε
+    ↓
+Ecliptic → Equatorial (rotation by ε)
+    ↓
+Heliocentric → Geocentric (subtract Earth position)
+    ↓
+Rectangular → Spherical (RA, Dec)
+    ↓
+Final Output (RA in hours, Dec in degrees)
+```
+
+#### Light-Time Correction (Optional)
+
+For high-precision applications (>arcsecond accuracy), light-time correction accounts for the finite speed of light:
+
+1. Calculate planet position at time `t`
+2. Calculate distance from Earth to planet
+3. Calculate light travel time: `Δt = distance / c` (where c = speed of light)
+4. Recalculate planet position at time `t - Δt`
+5. Use corrected position for final RA/Dec
+
+**Impact**: Typically ~0.01 arcseconds for inner planets, negligible for outer planets.
+
+**Current Implementation**: Light-time correction is omitted for simplicity. Can be added for high-precision applications.
 
 ### Data Sources
 
@@ -733,6 +832,92 @@ R = (R0 + R1×t + R2×t² + R3×t³ + R4×t⁴) / 10^8
 - Understanding of VSOP87 mathematical theory
 - Ability to implement complex astronomical algorithms
 - Software engineering skills (data structures, algorithms, testing)
+
+---
+
+## CLI Usage for Planetary Positions
+
+### Position Command
+
+The `position` command calculates the Right Ascension (RA) and Declination (Dec) of celestial objects, including planets.
+
+**Basic Syntax**:
+```bash
+cargo run -- position --object <OBJECT> --date <YYYY-MM-DD>
+```
+
+**Supported Objects**:
+- **Sun**: `--object "sun"`
+- **Moon**: `--object "moon"`
+- **Planets**: `--object "mercury"`, `"venus"`, `"mars"`, `"jupiter"`, `"saturn"`, `"uranus"`, `"neptune"`
+
+**Example Usage**:
+```bash
+# Calculate Jupiter's position on January 1, 2000
+cargo run -- position --object "jupiter" --date "2000-01-01"
+
+# Calculate Mars position on a specific date
+cargo run -- position --object "mars" --date "2024-12-25"
+```
+
+**Output Format**:
+```
+RA:  HH:MM:SS
+Dec: ±DD°MM'SS"
+```
+
+Where:
+- **RA**: Right Ascension in hours, minutes, seconds (0-24 hours)
+- **Dec**: Declination in degrees, arcminutes, arcseconds (-90° to +90°)
+
+### Calculation Pipeline
+
+When calculating a planet's position, the CLI follows this pipeline:
+
+1. **Parse Input**: Date string → Julian Date
+2. **VSOP87 Evaluation**: Calculate heliocentric ecliptic coordinates (L, B, R)
+3. **Coordinate Conversion**: 
+   - Ecliptic → Equatorial (rotation by obliquity)
+   - Heliocentric → Geocentric (subtract Earth's position)
+   - Rectangular → Spherical (RA, Dec)
+4. **Format Output**: Convert to hours/degrees format
+
+### Error Handling
+
+**Common Errors**:
+- **"Unknown object"**: Planet name not recognized (check spelling, case-insensitive)
+- **"Earth VSOP87 data not available"**: Earth's position data needed for geocentric conversion (may occur if Earth data is placeholder)
+- **"Invalid date"**: Date format must be YYYY-MM-DD
+
+**Verbose Logging**:
+Use `--verbose` flag to see detailed calculation steps:
+```bash
+cargo run -- --verbose position --object "jupiter" --date "2000-01-01"
+```
+
+This shows:
+- VSOP87 series evaluation values
+- Heliocentric ecliptic coordinates
+- Obliquity calculation
+- Coordinate conversion steps
+- Final RA/Dec values
+
+### Accuracy Considerations
+
+**For Planets**:
+- **Truncated VSOP87**: ~1-5 arcminutes accuracy (current implementation)
+- **Full VSOP87**: <1 arcsecond accuracy (if full coefficients are used)
+- **Light-time correction**: Not applied (adds ~0.01 arcseconds for inner planets)
+
+**For Sun/Moon**:
+- **Sun**: ~1 arcminute accuracy (simplified model)
+- **Moon**: ~10 arcminutes accuracy (perturbation theory with limited terms)
+
+### Rise/Set Times
+
+The `rise-set` command supports planets, but planet rise/set calculations are not yet fully implemented. The command will return an error indicating that planet rise/set times are pending.
+
+**Future Enhancement**: Planet rise/set times will use the same algorithm as Sun/Moon, but with planet positions calculated via VSOP87.
 
 ---
 

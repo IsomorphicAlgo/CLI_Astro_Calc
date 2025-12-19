@@ -113,13 +113,7 @@ fn main() -> Result<()> {
                 elevation: 0.0,
             };
             
-            let obj = match object.to_lowercase().as_str() {
-                "sun" => cli_astro_calc::celestial::CelestialObject::Sun,
-                "moon" => cli_astro_calc::celestial::CelestialObject::Moon,
-                _ => return Err(cli_astro_calc::AstroError::InvalidCoordinate(
-                    format!("Unknown object: {}", object)
-                )),
-            };
+            let obj = parse_celestial_object(&object)?;
             
             let rise_set = cli_astro_calc::celestial::calculate_rise_set_times(obj, location, date_time)?;
             
@@ -134,13 +128,7 @@ fn main() -> Result<()> {
         },
         Commands::Position { object, date } => {
             let date_time = parse_date_time(&date, None)?;
-            let obj = match object.to_lowercase().as_str() {
-                "sun" => cli_astro_calc::celestial::CelestialObject::Sun,
-                "moon" => cli_astro_calc::celestial::CelestialObject::Moon,
-                _ => return Err(cli_astro_calc::AstroError::InvalidCoordinate(
-                    format!("Unknown object: {}", object)
-                )),
-            };
+            let obj = parse_celestial_object(&object)?;
             
             let pos = cli_astro_calc::celestial::calculate_position(obj, date_time)?;
             let (ra_h, ra_m, ra_s) = format_time(pos.ra);
@@ -299,4 +287,38 @@ fn parse_and_convert_eci_to_ecef(coords: &str, gmst_opt: Option<f64>) -> Result<
     };
     
     eci_to_ecef(Eci { x, y, z }, gmst)
+}
+
+/// Parses a celestial object name into a CelestialObject enum.
+/// 
+/// Supports:
+/// - "sun" or "Sun" → Sun
+/// - "moon" or "Moon" → Moon
+/// - Planet names (case-insensitive): mercury, venus, mars, jupiter, saturn, uranus, neptune
+/// 
+/// # Arguments
+/// * `object_name` - Name of the celestial object
+/// 
+/// # Returns
+/// CelestialObject enum variant
+/// 
+/// # Errors
+/// Returns an error if the object name is not recognized
+fn parse_celestial_object(object_name: &str) -> Result<cli_astro_calc::celestial::CelestialObject> {
+    let obj_lower = object_name.to_lowercase();
+    
+    match obj_lower.as_str() {
+        "sun" => Ok(cli_astro_calc::celestial::CelestialObject::Sun),
+        "moon" => Ok(cli_astro_calc::celestial::CelestialObject::Moon),
+        planet_name => {
+            // Try to parse as a planet
+            if let Some(planet) = cli_astro_calc::planets::Planet::from_str(planet_name) {
+                Ok(cli_astro_calc::celestial::CelestialObject::Planet(planet))
+            } else {
+                Err(cli_astro_calc::AstroError::InvalidCoordinate(
+                    format!("Unknown object: {}. Supported: sun, moon, mercury, venus, mars, jupiter, saturn, uranus, neptune", object_name)
+                ))
+            }
+        }
+    }
 }
