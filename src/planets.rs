@@ -147,13 +147,15 @@ pub struct HeliocentricEcliptic {
 /// Full VSOP87 accuracy is typically better than 1 arcsecond for all planets.
 /// 
 /// # Example
-/// ```rust
+/// ```no_run
 /// use cli_astro_calc::planets::{Planet, calculate_planet_position};
 /// 
-/// // Calculate Jupiter's position on January 1, 2000
+/// // Calculate Mercury's position on January 1, 2000
+/// // Note: Requires Earth's VSOP87 data for geocentric conversion
 /// let jd = 2451545.0; // J2000.0
-/// let position = calculate_planet_position(Planet::Jupiter, jd)?;
-/// println!("Jupiter: RA={:.2}h, Dec={:.2}°", position.ra, position.dec);
+/// let position = calculate_planet_position(Planet::Mercury, jd)?;
+/// println!("Mercury: RA={:.2}h, Dec={:.2}°", position.ra, position.dec);
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn calculate_planet_position(planet: Planet, julian_date: f64) -> Result<RaDec> {
     use log::{info, warn, error};

@@ -65,6 +65,7 @@ pub struct Eci {
 /// let lst = 12.0; // Local sidereal time
 /// let alt_az = ra_dec_to_alt_az(ra_dec, 47.9, -122.25, lst)?;
 /// // alt_az.alt and alt_az.az contain the horizontal coordinates
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn ra_dec_to_alt_az(ra_dec: RaDec, observer_lat: f64, _observer_lon: f64, lst: f64) -> Result<AltAz> {
     let dec_rad = ra_dec.dec.to_radians();
@@ -100,6 +101,7 @@ pub fn ra_dec_to_alt_az(ra_dec: RaDec, observer_lat: f64, _observer_lon: f64, ls
 /// let lst = 12.0; // Local sidereal time
 /// let ra_dec = alt_az_to_ra_dec(alt_az, 47.9, -122.25, lst)?;
 /// // ra_dec.ra and ra_dec.dec contain the equatorial coordinates
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn alt_az_to_ra_dec(alt_az: AltAz, observer_lat: f64, _observer_lon: f64, lst: f64) -> Result<RaDec> {
     let alt_rad = alt_az.alt.to_radians();
@@ -233,6 +235,7 @@ fn apply_rotation_matrix(matrix: [[f64; 3]; 3], vector: (f64, f64, f64)) -> (f64
 /// let gmst = 0.0; // GMST = 0 means ECEF and ECI X-axes align
 /// let eci = ecef_to_eci(ecef, gmst)?;
 /// // At GMST=0, ECEF and ECI should be identical
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn ecef_to_eci(ecef: Ecef, gmst: f64) -> Result<Eci> {
     // Validate inputs - NaN and infinity checks
@@ -371,6 +374,7 @@ pub fn ecef_to_eci(ecef: Ecef, gmst: f64) -> Result<Eci> {
 /// let gmst = 0.0; // GMST = 0 means ECEF and ECI X-axes align
 /// let ecef = eci_to_ecef(eci, gmst)?;
 /// // At GMST=0, ECEF and ECI should be identical
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn eci_to_ecef(eci: Eci, gmst: f64) -> Result<Ecef> {
     // Validate inputs - NaN and infinity checks
