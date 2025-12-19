@@ -783,8 +783,15 @@ fn get_mercury_vsop87_data() -> PlanetVsop87Data {
 }
 
 /// Gets simplified VSOP87 data for Venus.
-/// Placeholder implementation - will be populated with truncated coefficients.
+/// 
+/// **Note**: This is a placeholder implementation.
+/// Venus VSOP87 coefficients will be populated in a future update.
+/// Currently returns empty series, which will cause planet position calculations to fail.
+/// 
+/// To implement: Add truncated VSOP87 coefficients for Venus following the same
+/// structure as Mercury's implementation.
 fn get_venus_vsop87_data() -> PlanetVsop87Data {
+    // Placeholder: Venus VSOP87 coefficients not yet implemented
     // TODO: Add truncated VSOP87 coefficients for Venus
     // For now, return minimal data structure
     PlanetVsop87Data {
@@ -816,43 +823,74 @@ fn get_venus_vsop87_data() -> PlanetVsop87Data {
 }
 
 /// Gets simplified VSOP87 data for Earth.
-/// Placeholder implementation - will be populated with truncated coefficients.
+/// 
+/// **Note**: This is a placeholder implementation.
+/// Earth's VSOP87 coefficients are required for geocentric coordinate conversion.
+/// Currently returns empty series, which will cause planet position calculations to fail.
+/// 
+/// **Critical**: Earth's position is needed to convert from heliocentric to geocentric coordinates.
+/// Without Earth's VSOP87 data, planet position calculations cannot complete.
+/// 
+/// To implement: Add truncated VSOP87 coefficients for Earth following the same
+/// structure as Mercury's implementation.
 fn get_earth_vsop87_data() -> PlanetVsop87Data {
+    // Placeholder: Earth VSOP87 coefficients not yet implemented
     // TODO: Add truncated VSOP87 coefficients for Earth
+    // Earth's position is critical for geocentric conversion
     get_venus_vsop87_data() // Placeholder
 }
 
 /// Gets simplified VSOP87 data for Mars.
-/// Placeholder implementation - will be populated with truncated coefficients.
+/// 
+/// **Note**: This is a placeholder implementation.
+/// Mars VSOP87 coefficients will be populated in a future update.
+/// Currently returns empty series, which will cause planet position calculations to fail.
 fn get_mars_vsop87_data() -> PlanetVsop87Data {
+    // Placeholder: Mars VSOP87 coefficients not yet implemented
     // TODO: Add truncated VSOP87 coefficients for Mars
     get_venus_vsop87_data() // Placeholder
 }
 
 /// Gets simplified VSOP87 data for Jupiter.
-/// Placeholder implementation - will be populated with truncated coefficients.
+/// 
+/// **Note**: This is a placeholder implementation.
+/// Jupiter VSOP87 coefficients will be populated in a future update.
+/// Currently returns empty series, which will cause planet position calculations to fail.
 fn get_jupiter_vsop87_data() -> PlanetVsop87Data {
+    // Placeholder: Jupiter VSOP87 coefficients not yet implemented
     // TODO: Add truncated VSOP87 coefficients for Jupiter
     get_venus_vsop87_data() // Placeholder
 }
 
 /// Gets simplified VSOP87 data for Saturn.
-/// Placeholder implementation - will be populated with truncated coefficients.
+/// 
+/// **Note**: This is a placeholder implementation.
+/// Saturn VSOP87 coefficients will be populated in a future update.
+/// Currently returns empty series, which will cause planet position calculations to fail.
 fn get_saturn_vsop87_data() -> PlanetVsop87Data {
+    // Placeholder: Saturn VSOP87 coefficients not yet implemented
     // TODO: Add truncated VSOP87 coefficients for Saturn
     get_venus_vsop87_data() // Placeholder
 }
 
 /// Gets simplified VSOP87 data for Uranus.
-/// Placeholder implementation - will be populated with truncated coefficients.
+/// 
+/// **Note**: This is a placeholder implementation.
+/// Uranus VSOP87 coefficients will be populated in a future update.
+/// Currently returns empty series, which will cause planet position calculations to fail.
 fn get_uranus_vsop87_data() -> PlanetVsop87Data {
+    // Placeholder: Uranus VSOP87 coefficients not yet implemented
     // TODO: Add truncated VSOP87 coefficients for Uranus
     get_venus_vsop87_data() // Placeholder
 }
 
 /// Gets simplified VSOP87 data for Neptune.
-/// Placeholder implementation - will be populated with truncated coefficients.
+/// 
+/// **Note**: This is a placeholder implementation.
+/// Neptune VSOP87 coefficients will be populated in a future update.
+/// Currently returns empty series, which will cause planet position calculations to fail.
 fn get_neptune_vsop87_data() -> PlanetVsop87Data {
+    // Placeholder: Neptune VSOP87 coefficients not yet implemented
     // TODO: Add truncated VSOP87 coefficients for Neptune
     get_venus_vsop87_data() // Placeholder
 }

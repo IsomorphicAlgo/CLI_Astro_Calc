@@ -1,9 +1,11 @@
+// Core modules
 pub mod coordinates;
 pub mod celestial;
 pub mod time;
 pub mod orbital;
 pub mod planets;
 
+// Error handling
 pub mod error {
     use thiserror::Error;
 
@@ -25,4 +27,17 @@ pub mod error {
     pub type Result<T> = std::result::Result<T, AstroError>;
 }
 
+// Re-export commonly used types and functions for convenience
 pub use error::{AstroError, Result};
+
+// Re-export coordinate types
+pub use coordinates::{RaDec, AltAz, Ecef, Eci};
+
+// Re-export celestial object types
+pub use celestial::{CelestialObject, ObserverLocation, RiseSetTimes};
+
+// Re-export planet types
+pub use planets::{Planet, calculate_planet_position};
+
+// Re-export time functions
+pub use time::{julian_date, greenwich_mean_sidereal_time, local_sidereal_time};
