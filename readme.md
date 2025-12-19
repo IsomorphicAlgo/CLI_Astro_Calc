@@ -652,19 +652,42 @@ cargo run -- position --object "moon" --date "2024-01-01"
 
 # Jupiter's position on January 1, 2000 (J2000.0 epoch)
 cargo run -- position --object "jupiter" --date "2000-01-01"
-# Output: RA: 00:00:00, Dec: +00:00:00 (example - actual values depend on VSOP87 data)
+# Output: RA: HH:MM:SS, Dec: ±DD°MM'SS" (geocentric equatorial coordinates)
+# Note: Actual values depend on VSOP87 data availability
 
 # Mars position on a specific date
 cargo run -- position --object "mars" --date "2024-12-25"
-# Output: RA and Dec coordinates for Mars
+# Output: RA and Dec coordinates for Mars at Christmas 2024
 
-# Multiple planets (run separately)
+# Mercury position (inner planet, fast-moving)
 cargo run -- position --object "mercury" --date "2024-01-01"
+# Output: Mercury's position on New Year's Day 2024
+
+# Venus position
 cargo run -- position --object "venus" --date "2024-01-01"
+# Output: Venus's position
+
+# Saturn position (outer planet, slower-moving)
 cargo run -- position --object "saturn" --date "2024-01-01"
+# Output: Saturn's position
+
+# Compare multiple planets on the same date
+cargo run -- position --object "mercury" --date "2024-06-21"
+cargo run -- position --object "venus" --date "2024-06-21"
+cargo run -- position --object "mars" --date "2024-06-21"
+cargo run -- position --object "jupiter" --date "2024-06-21"
+# Output: Positions of all planets on summer solstice 2024
+
+# Verbose logging for debugging
+cargo run -- --verbose position --object "jupiter" --date "2000-01-01"
+# Output: Detailed VSOP87 calculation steps, coordinate conversions, etc.
 ```
 
-**Note**: Planet positions are calculated using VSOP87 theory. If Earth's VSOP87 data is not fully implemented, planet calculations may return an error indicating that Earth data is required for geocentric conversion.
+**Note**: 
+- Planet positions are calculated using VSOP87 theory (Variations Séculaires des Orbites Planétaires 1987)
+- If Earth's VSOP87 data is not fully implemented, planet calculations may return an error indicating that Earth data is required for geocentric conversion
+- Current implementation uses truncated VSOP87 (simplified coefficients) for ~1-5 arcminute accuracy
+- For more information on VSOP87 and coordinate systems, see [OVERVIEW.md](OVERVIEW.md)
 
 ### 3. `time` - Calculate Julian Date and Sidereal Time
 Convert calendar dates to Julian Date and calculate Greenwich Mean Sidereal Time.
@@ -768,6 +791,9 @@ We utilize the full Julian day, vs the reduced.
 - **RA/Dec to Alt/Az**: Convert from equatorial coordinates (Right Ascension/Declination) to horizontal coordinates (Altitude/Azimuth) for a given observer location and time
 - **Alt/Az to RA/Dec**: Convert from horizontal coordinates to equatorial coordinates
 - **ECEF/ECI**: Convert between Earth-Centered Earth-Fixed and Earth-Centered Inertial coordinate systems
+  - ECEF: Rotates with Earth (used for ground-based coordinates)
+  - ECI: Fixed relative to stars (used for satellite tracking, J2000.0 epoch)
+  - Transformation uses GMST (Greenwich Mean Sidereal Time) for rotation
 ### Celestial Coordinates
 - [Equatorial Coordinate System](https://en.wikipedia.org/wiki/Equatorial_coordinate_system) - Right Ascension / Declination
 - [Horizontal Coordinate System](https://en.wikipedia.org/wiki/Horizontal_coordinate_system) - Altitude / Azimuth
@@ -803,8 +829,12 @@ We utilize the full Julian day, vs the reduced.
 
 ### Planetary Positions (References)
 - [VSOP87](https://en.wikipedia.org/wiki/VSOP_(planets)) - Variable Speed Orbital Perturbations theory
+  - Semi-analytical model for planetary positions (Bretagnon & Francou, 1987)
+  - Provides heliocentric ecliptic coordinates (L, B, R)
+  - Converted to geocentric equatorial (RA, Dec) for observations
 - [JPL Horizons](https://ssd.jpl.nasa.gov/horizons/) - Ephemeris data for validation
 - [Planetary Theory](https://en.wikipedia.org/wiki/Planetary_theory) - Mathematical models for planet positions
+- [IMCCE VSOP87](https://ftp.imcce.fr/pub/ephem/planets/vsop87/) - Official VSOP87 coefficient data source
 
 ## Changelog
 

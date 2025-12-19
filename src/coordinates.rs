@@ -45,6 +45,27 @@ pub struct Eci {
     pub z: f64,
 }
 
+/// Converts equatorial coordinates (RA/Dec) to horizontal coordinates (Alt/Az).
+/// 
+/// # Arguments
+/// * `ra_dec` - Right Ascension (hours) and Declination (degrees)
+/// * `observer_lat` - Observer latitude in degrees (positive = North, negative = South)
+/// * `_observer_lon` - Observer longitude in degrees (not used in calculation, but kept for API consistency)
+/// * `lst` - Local Sidereal Time in hours (0-24)
+/// 
+/// # Returns
+/// Altitude (degrees, -90 to +90) and Azimuth (degrees, 0-360, measured clockwise from North)
+/// 
+/// # Example
+/// ```rust
+/// use cli_astro_calc::coordinates::{RaDec, ra_dec_to_alt_az};
+/// 
+/// // Convert star at RA=12h, Dec=45° to Alt/Az for observer at 47.9°N
+/// let ra_dec = RaDec { ra: 12.0, dec: 45.0 };
+/// let lst = 12.0; // Local sidereal time
+/// let alt_az = ra_dec_to_alt_az(ra_dec, 47.9, -122.25, lst)?;
+/// // alt_az.alt and alt_az.az contain the horizontal coordinates
+/// ```
 pub fn ra_dec_to_alt_az(ra_dec: RaDec, observer_lat: f64, _observer_lon: f64, lst: f64) -> Result<AltAz> {
     let dec_rad = ra_dec.dec.to_radians();
     let lat_rad = observer_lat.to_radians();
@@ -59,6 +80,27 @@ pub fn ra_dec_to_alt_az(ra_dec: RaDec, observer_lat: f64, _observer_lon: f64, ls
     Ok(AltAz { alt: alt_deg, az: az_deg })
 }
 
+/// Converts horizontal coordinates (Alt/Az) to equatorial coordinates (RA/Dec).
+/// 
+/// # Arguments
+/// * `alt_az` - Altitude (degrees, -90 to +90) and Azimuth (degrees, 0-360)
+/// * `observer_lat` - Observer latitude in degrees (positive = North, negative = South)
+/// * `_observer_lon` - Observer longitude in degrees (not used in calculation, but kept for API consistency)
+/// * `lst` - Local Sidereal Time in hours (0-24)
+/// 
+/// # Returns
+/// Right Ascension (hours, 0-24) and Declination (degrees, -90 to +90)
+/// 
+/// # Example
+/// ```rust
+/// use cli_astro_calc::coordinates::{AltAz, alt_az_to_ra_dec};
+/// 
+/// // Convert telescope pointing (45° altitude, 180° azimuth = due South) to RA/Dec
+/// let alt_az = AltAz { alt: 45.0, az: 180.0 };
+/// let lst = 12.0; // Local sidereal time
+/// let ra_dec = alt_az_to_ra_dec(alt_az, 47.9, -122.25, lst)?;
+/// // ra_dec.ra and ra_dec.dec contain the equatorial coordinates
+/// ```
 pub fn alt_az_to_ra_dec(alt_az: AltAz, observer_lat: f64, _observer_lon: f64, lst: f64) -> Result<RaDec> {
     let alt_rad = alt_az.alt.to_radians();
     let az_rad = alt_az.az.to_radians();
