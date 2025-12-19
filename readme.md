@@ -707,19 +707,40 @@ cargo run -- convert --from ra-dec --to alt-az --coords "12.5,45.0"
 cargo run -- convert --from alt-az --to ra-dec --coords "45.0,180.0"
 
 # Convert ECEF to ECI (auto-calculates GMST from current time)
+# Point on Earth's surface at equator and prime meridian (Greenwich)
 cargo run -- convert --from ecef --to eci --coords "6378137.0,0.0,0.0"
+# Output: X, Y, Z coordinates in ECI frame (rotated by current GMST)
 
 # Convert ECEF to ECI with specified GMST
+# Useful for converting at a specific time or for testing
 cargo run -- convert --from ecef --to eci --coords "6378137.0,0.0,0.0" --gmst 12.5
+# Output: ECI coordinates at GMST = 12.5 hours
 
 # Convert ECI to ECEF (auto-calculates GMST from current time)
+# Convert from inertial frame (fixed to stars) to Earth-fixed frame
 cargo run -- convert --from eci --to ecef --coords "6378137.0,0.0,0.0"
+# Output: ECEF coordinates (rotated by current GMST)
+
+# Example: Geosynchronous satellite position
+# Typical geosynchronous orbit radius: ~42,164,000 m
+cargo run -- convert --from ecef --to eci --coords "42164000.0,0.0,0.0" --gmst 0.0
+# Output: ECI coordinates for satellite at GMST = 0 (ECEF and ECI X-axes align)
+
+# Example: ISS-like orbit (400 km altitude)
+# ISS altitude ~400 km, so radius ~6,778,137 m
+cargo run -- convert --from ecef --to eci --coords "6778137.0,0.0,0.0"
+# Output: ECI coordinates for ISS position
 ```
 
 **Note:** 
 - RA/Dec ↔ Alt/Az conversions vary based on current time and observer location (hardcoded as 47.9088°N, 122.2503°W).
 - ECEF/ECI conversions require GMST (Greenwich Mean Sidereal Time). If `--gmst` is not provided, it is automatically calculated from the current time.
-- ECEF/ECI coordinates are in meters. Typical values range from Earth's surface (~6,378,137 m) to geosynchronous orbit (~42,164,000 m).
+- ECEF/ECI coordinates are in meters. Typical values:
+  - Earth's surface: ~6,378,137 m (equatorial radius)
+  - Low Earth Orbit (LEO): ~6,778,137 m (400 km altitude, e.g., ISS)
+  - Geosynchronous orbit: ~42,164,000 m (35,786 km altitude)
+- ECEF rotates with Earth; ECI is fixed relative to stars (J2000.0 epoch)
+- For more information on coordinate systems, see [OVERVIEW.md](OVERVIEW.md)
 
 ### 5. `orbital` - Orbital Mechanics (Basic)
 Display orbital elements (full state vector conversion coming soon).
